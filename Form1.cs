@@ -55,6 +55,7 @@ namespace OLA
         {
             InitializeComponent();
             InitializeSettings();
+            ApplyDesignMdStyle();
             this.moniqi_liebiao.ClearSelection();
 
             // 注册插件

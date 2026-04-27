@@ -1,4 +1,4 @@
-﻿namespace OLA
+namespace OLA
 {
     partial class Form1
     {
@@ -103,7 +103,7 @@
             dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.TopCenter;
             moniqi_liebiao.RowsDefaultCellStyle = dataGridViewCellStyle3;
             moniqi_liebiao.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            moniqi_liebiao.Size = new Size(706, 265);
+            moniqi_liebiao.Size = new Size(791, 297);
             moniqi_liebiao.TabIndex = 0;
             // 
             // xuhao
@@ -112,7 +112,7 @@
             xuhao.Name = "xuhao";
             xuhao.ReadOnly = true;
             xuhao.SortMode = DataGridViewColumnSortMode.NotSortable;
-            xuhao.Width = 50;
+            xuhao.Width = 56;
             // 
             // moniqi
             // 
@@ -141,7 +141,7 @@
             zhuangtai.Name = "zhuangtai";
             zhuangtai.ReadOnly = true;
             zhuangtai.SortMode = DataGridViewColumnSortMode.NotSortable;
-            zhuangtai.Width = 130;
+            zhuangtai.Width = 146;
             // 
             // jubing
             // 
@@ -156,16 +156,16 @@
             yichang.Name = "yichang";
             yichang.ReadOnly = true;
             yichang.SortMode = DataGridViewColumnSortMode.NotSortable;
-            yichang.Width = 120;
+            yichang.Width = 134;
             // 
             // tabControl1
             // 
             tabControl1.Controls.Add(tabPage1);
             tabControl1.Controls.Add(tabPage2);
-            tabControl1.Location = new Point(-1, 273);
+            tabControl1.Location = new Point(-1, 306);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(536, 182);
+            tabControl1.Size = new Size(600, 204);
             tabControl1.TabIndex = 1;
             // 
             // tabPage1
@@ -190,19 +190,19 @@
             tabPage1.Controls.Add(label3);
             tabPage1.Controls.Add(模拟器选择);
             tabPage1.Controls.Add(label1);
-            tabPage1.Location = new Point(4, 26);
+            tabPage1.Location = new Point(4, 29);
             tabPage1.Name = "tabPage1";
             tabPage1.Padding = new Padding(3);
-            tabPage1.Size = new Size(528, 152);
+            tabPage1.Size = new Size(591, 170);
             tabPage1.TabIndex = 0;
             tabPage1.Text = "基础设置";
             tabPage1.UseVisualStyleBackColor = true;
             // 
             // shuaxin_liebiao
             // 
-            shuaxin_liebiao.Location = new Point(198, 61);
+            shuaxin_liebiao.Location = new Point(222, 68);
             shuaxin_liebiao.Name = "shuaxin_liebiao";
-            shuaxin_liebiao.Size = new Size(75, 23);
+            shuaxin_liebiao.Size = new Size(84, 26);
             shuaxin_liebiao.TabIndex = 19;
             shuaxin_liebiao.Text = "刷新列表";
             shuaxin_liebiao.UseVisualStyleBackColor = true;
@@ -210,9 +210,9 @@
             // 
             // guanbi_suoyou
             // 
-            guanbi_suoyou.Location = new Point(198, 90);
+            guanbi_suoyou.Location = new Point(222, 101);
             guanbi_suoyou.Name = "guanbi_suoyou";
-            guanbi_suoyou.Size = new Size(75, 23);
+            guanbi_suoyou.Size = new Size(84, 26);
             guanbi_suoyou.TabIndex = 18;
             guanbi_suoyou.Text = "关闭所有";
             guanbi_suoyou.UseVisualStyleBackColor = true;
@@ -220,9 +220,9 @@
             // 
             // queding_shezhi
             // 
-            queding_shezhi.Location = new Point(198, 122);
+            queding_shezhi.Location = new Point(222, 137);
             queding_shezhi.Name = "queding_shezhi";
-            queding_shezhi.Size = new Size(75, 23);
+            queding_shezhi.Size = new Size(84, 26);
             queding_shezhi.TabIndex = 17;
             queding_shezhi.Text = "确定";
             queding_shezhi.UseVisualStyleBackColor = true;
@@ -230,44 +230,44 @@
             // yixuan_renwu
             // 
             yixuan_renwu.FormattingEnabled = true;
-            yixuan_renwu.Location = new Point(445, 29);
+            yixuan_renwu.Location = new Point(498, 32);
             yixuan_renwu.Name = "yixuan_renwu";
-            yixuan_renwu.Size = new Size(76, 123);
+            yixuan_renwu.Size = new Size(85, 138);
             yixuan_renwu.TabIndex = 16;
             // 
             // renwu_liebiao
             // 
             renwu_liebiao.FormattingEnabled = true;
             renwu_liebiao.Items.AddRange(new object[] { "主线任务", "支线任务", "每日活跃", "每日签到", "挂机任务" });
-            renwu_liebiao.Location = new Point(353, 29);
+            renwu_liebiao.Location = new Point(395, 32);
             renwu_liebiao.Name = "renwu_liebiao";
-            renwu_liebiao.Size = new Size(76, 123);
+            renwu_liebiao.Size = new Size(85, 138);
             renwu_liebiao.TabIndex = 15;
             // 
             // label6
             // 
             label6.AutoSize = true;
-            label6.Location = new Point(458, 15);
+            label6.Location = new Point(513, 17);
             label6.Name = "label6";
-            label6.Size = new Size(56, 17);
+            label6.Size = new Size(63, 19);
             label6.TabIndex = 14;
             label6.Text = "已选任务";
             // 
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(366, 15);
+            label2.Location = new Point(410, 17);
             label2.Name = "label2";
-            label2.Size = new Size(56, 17);
+            label2.Size = new Size(63, 19);
             label2.TabIndex = 13;
             label2.Text = "任务列表";
             // 
             // shifou_huanhao
             // 
             shifou_huanhao.AutoSize = true;
-            shifou_huanhao.Location = new Point(201, 37);
+            shifou_huanhao.Location = new Point(225, 41);
             shifou_huanhao.Name = "shifou_huanhao";
-            shifou_huanhao.Size = new Size(75, 21);
+            shifou_huanhao.Size = new Size(84, 24);
             shifou_huanhao.TabIndex = 12;
             shifou_huanhao.Text = "是否换号";
             shifou_huanhao.UseVisualStyleBackColor = true;
@@ -275,9 +275,9 @@
             // shifou_zhiding
             // 
             shifou_zhiding.AutoSize = true;
-            shifou_zhiding.Location = new Point(282, 9);
+            shifou_zhiding.Location = new Point(316, 10);
             shifou_zhiding.Name = "shifou_zhiding";
-            shifou_zhiding.Size = new Size(75, 21);
+            shifou_zhiding.Size = new Size(84, 24);
             shifou_zhiding.TabIndex = 11;
             shifou_zhiding.Text = "是否置顶";
             shifou_zhiding.UseVisualStyleBackColor = true;
@@ -285,9 +285,9 @@
             // zidong_denglu
             // 
             zidong_denglu.AutoSize = true;
-            zidong_denglu.Location = new Point(201, 9);
+            zidong_denglu.Location = new Point(225, 10);
             zidong_denglu.Name = "zidong_denglu";
-            zidong_denglu.Size = new Size(75, 21);
+            zidong_denglu.Size = new Size(84, 24);
             zidong_denglu.TabIndex = 10;
             zidong_denglu.Text = "自动登录";
             zidong_denglu.UseVisualStyleBackColor = true;
@@ -297,16 +297,16 @@
             pailie_fangshi.BackColor = SystemColors.Window;
             pailie_fangshi.FormattingEnabled = true;
             pailie_fangshi.Items.AddRange(new object[] { "平铺排序", "隐藏窗口" });
-            pailie_fangshi.Location = new Point(71, 122);
+            pailie_fangshi.Location = new Point(80, 137);
             pailie_fangshi.Name = "pailie_fangshi";
-            pailie_fangshi.Size = new Size(121, 25);
+            pailie_fangshi.Size = new Size(136, 28);
             pailie_fangshi.TabIndex = 9;
             // 
             // lujing_shuru
             // 
-            lujing_shuru.Location = new Point(71, 93);
+            lujing_shuru.Location = new Point(80, 104);
             lujing_shuru.Name = "lujing_shuru";
-            lujing_shuru.Size = new Size(121, 23);
+            lujing_shuru.Size = new Size(136, 26);
             lujing_shuru.TabIndex = 8;
             lujing_shuru.Text = "D:\\leidian\\LDPlayer9";
             // 
@@ -314,88 +314,88 @@
             // 
             qufu_xuanze.FormattingEnabled = true;
             qufu_xuanze.Items.AddRange(new object[] { "一区", "二区" });
-            qufu_xuanze.Location = new Point(71, 65);
+            qufu_xuanze.Location = new Point(80, 73);
             qufu_xuanze.Name = "qufu_xuanze";
-            qufu_xuanze.Size = new Size(121, 25);
+            qufu_xuanze.Size = new Size(136, 28);
             qufu_xuanze.TabIndex = 7;
             // 
             // moniqi_xuanze
             // 
             moniqi_xuanze.FormattingEnabled = true;
             moniqi_xuanze.Items.AddRange(new object[] { "雷电模拟器", "MuMu模拟器" });
-            moniqi_xuanze.Location = new Point(71, 34);
+            moniqi_xuanze.Location = new Point(80, 38);
             moniqi_xuanze.Name = "moniqi_xuanze";
-            moniqi_xuanze.Size = new Size(121, 25);
+            moniqi_xuanze.Size = new Size(136, 28);
             moniqi_xuanze.TabIndex = 6;
             moniqi_xuanze.Click += moniqi_xuanze_SelectedIndexChanged;
             // 
             // duokai_shuliang
             // 
-            duokai_shuliang.Location = new Point(71, 6);
+            duokai_shuliang.Location = new Point(80, 7);
             duokai_shuliang.Name = "duokai_shuliang";
-            duokai_shuliang.Size = new Size(28, 23);
+            duokai_shuliang.Size = new Size(31, 26);
             duokai_shuliang.TabIndex = 5;
             // 
             // label5
             // 
             label5.AutoSize = true;
-            label5.Location = new Point(18, 128);
+            label5.Location = new Point(20, 143);
             label5.Name = "label5";
-            label5.Size = new Size(56, 17);
+            label5.Size = new Size(63, 19);
             label5.TabIndex = 4;
             label5.Text = "排列方式";
             // 
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(42, 99);
+            label4.Location = new Point(47, 111);
             label4.Name = "label4";
-            label4.Size = new Size(32, 17);
+            label4.Size = new Size(36, 19);
             label4.TabIndex = 3;
             label4.Text = "路径";
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(30, 71);
+            label3.Location = new Point(34, 80);
             label3.Name = "label3";
-            label3.Size = new Size(44, 17);
+            label3.Size = new Size(49, 19);
             label3.TabIndex = 2;
             label3.Text = "服务器";
             // 
             // 模拟器选择
             // 
             模拟器选择.AutoSize = true;
-            模拟器选择.Location = new Point(6, 40);
+            模拟器选择.Location = new Point(7, 45);
             模拟器选择.Name = "模拟器选择";
-            模拟器选择.Size = new Size(68, 17);
+            模拟器选择.Size = new Size(76, 19);
             模拟器选择.TabIndex = 1;
             模拟器选择.Text = "模拟器选择";
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(18, 15);
+            label1.Location = new Point(20, 17);
             label1.Name = "label1";
-            label1.Size = new Size(56, 17);
+            label1.Size = new Size(63, 19);
             label1.TabIndex = 0;
             label1.Text = "多开数量";
             // 
             // tabPage2
             // 
-            tabPage2.Location = new Point(4, 26);
+            tabPage2.Location = new Point(4, 29);
             tabPage2.Name = "tabPage2";
             tabPage2.Padding = new Padding(3);
-            tabPage2.Size = new Size(528, 152);
+            tabPage2.Size = new Size(591, 170);
             tabPage2.TabIndex = 1;
             tabPage2.Text = "通用设置";
             tabPage2.UseVisualStyleBackColor = true;
             // 
             // quanbu_qidong
             // 
-            quanbu_qidong.Location = new Point(544, 303);
+            quanbu_qidong.Location = new Point(609, 339);
             quanbu_qidong.Name = "quanbu_qidong";
-            quanbu_qidong.Size = new Size(75, 23);
+            quanbu_qidong.Size = new Size(84, 26);
             quanbu_qidong.TabIndex = 2;
             quanbu_qidong.Text = "全部启动";
             quanbu_qidong.UseVisualStyleBackColor = true;
@@ -403,36 +403,36 @@
             // 
             // tingzhi_xuanzhong
             // 
-            tingzhi_xuanzhong.Location = new Point(544, 367);
+            tingzhi_xuanzhong.Location = new Point(609, 411);
             tingzhi_xuanzhong.Name = "tingzhi_xuanzhong";
-            tingzhi_xuanzhong.Size = new Size(75, 23);
+            tingzhi_xuanzhong.Size = new Size(84, 26);
             tingzhi_xuanzhong.TabIndex = 3;
             tingzhi_xuanzhong.Text = "停止选中";
             tingzhi_xuanzhong.UseVisualStyleBackColor = true;
             // 
             // huifu_suoyou
             // 
-            huifu_suoyou.Location = new Point(626, 336);
+            huifu_suoyou.Location = new Point(701, 376);
             huifu_suoyou.Name = "huifu_suoyou";
-            huifu_suoyou.Size = new Size(75, 23);
+            huifu_suoyou.Size = new Size(84, 26);
             huifu_suoyou.TabIndex = 4;
             huifu_suoyou.Text = "恢复";
             huifu_suoyou.UseVisualStyleBackColor = true;
             // 
             // zanting_suoyou
             // 
-            zanting_suoyou.Location = new Point(544, 335);
+            zanting_suoyou.Location = new Point(609, 375);
             zanting_suoyou.Name = "zanting_suoyou";
-            zanting_suoyou.Size = new Size(75, 23);
+            zanting_suoyou.Size = new Size(84, 26);
             zanting_suoyou.TabIndex = 5;
             zanting_suoyou.Text = "暂停";
             zanting_suoyou.UseVisualStyleBackColor = true;
             // 
             // quanbu_tingzhi
             // 
-            quanbu_tingzhi.Location = new Point(626, 303);
+            quanbu_tingzhi.Location = new Point(701, 339);
             quanbu_tingzhi.Name = "quanbu_tingzhi";
-            quanbu_tingzhi.Size = new Size(75, 23);
+            quanbu_tingzhi.Size = new Size(84, 26);
             quanbu_tingzhi.TabIndex = 6;
             quanbu_tingzhi.Text = "全部停止";
             quanbu_tingzhi.UseVisualStyleBackColor = true;
@@ -441,15 +441,15 @@
             // statusStrip1
             // 
             statusStrip1.Items.AddRange(new ToolStripItem[] { yunxingshijian });
-            statusStrip1.Location = new Point(0, 456);
+            statusStrip1.Location = new Point(0, 511);
             statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(701, 22);
+            statusStrip1.Size = new Size(785, 25);
             statusStrip1.TabIndex = 7;
             // 
             // yunxingshijian
             // 
             yunxingshijian.Name = "yunxingshijian";
-            yunxingshijian.Size = new Size(135, 17);
+            yunxingshijian.Size = new Size(151, 19);
             yunxingshijian.Text = "脚本运行时间: 00:00:00";
             // 
             // timer_runtime
@@ -461,7 +461,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 17F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(701, 478);
+            ClientSize = new Size(785, 535);
             Controls.Add(statusStrip1);
             Controls.Add(quanbu_tingzhi);
             Controls.Add(zanting_suoyou);
