@@ -1,34 +1,56 @@
-﻿using System;
-using System.IO;
-using System.Threading;
+using System;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using OLAPlug;
 
 namespace OLA
 {
     public class GameTask
     {
-        private TaskWorker _worker;
+        private readonly TaskWorker _worker;
+
+        public bool LastTaskCompleted { get; private set; } = true;
 
         public GameTask(TaskWorker worker)
         {
             _worker = worker;
         }
 
+        private void MarkTaskFailed(string message)
+        {
+            LastTaskCompleted = false;
+            _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] {message}");
+            _worker.MarkCurrentTaskUnfinished();
+        }
+
         public async Task Execute(string taskName)
         {
-            _worker.LastActionTime = DateTime.Now; // 【新增】每次开始新任务，重置计时器
+            LastTaskCompleted = true;
+            _worker.LastActionTime = DateTime.Now;
 
             switch (taskName)
             {
-                case "主线任务": await MainQuest(); break;
-                case "每日活跃": await DailyActive(); break;
-                case "自动签到": await AutoSign(); break;
-                case "支线任务": await SideQuest(); break;
-                case "挂机任务": await AfkTask(); break;
+                case "主线任务":
+                    await MainQuest();
+                    break;
+
+                case "每日活跃":
+                    await DailyActive();
+                    break;
+
+                case "自动签到":
+                    await AutoSign();
+                    break;
+
+                case "支线任务":
+                    await SideQuest();
+                    break;
+
+                case "挂机任务":
+                    await AfkTask();
+                    break;
+
                 default:
-                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 未知任务: {taskName}");
+                    MarkTaskFailed($"未知任务: {taskName}");
                     await _worker.SmartSleep(1000);
                     break;
             }
@@ -38,6 +60,7 @@ namespace OLA
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "启动/检查游戏", _worker.CurrentBindHwnd.ToString());
             _worker.EnsureGameRunning();
+
             if (!await _worker.SmartSleep(5000)) return;
 
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "执行主线中...", _worker.CurrentBindHwnd.ToString());
@@ -46,10 +69,9 @@ namespace OLA
             {
                 if (!await _worker.SmartSleep(1000)) return;
 
-                // 【新增】3分钟防卡死检测：如果超过3分钟没有任何点击动作，直接结束当前任务
                 if ((DateTime.Now - _worker.LastActionTime).TotalMinutes >= 3)
                 {
-                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⏳ 超过3分钟未找到目标，防卡死触发，完成当前任务");
+                    MarkTaskFailed("⏳ 三分钟没识别到任务，防卡死触发");
                     return;
                 }
 
@@ -64,14 +86,14 @@ namespace OLA
                 if (await _worker.OL_MatchWindowsFromPath(641, 442, 694, 457, "立即加点.bmp", 666, 449, 500))
                 {
                     await _worker.SmartSleep(1000);
+
                     while (true)
                     {
                         if (!await _worker.SmartSleep(100)) return;
 
-                        // 子循环内的防卡死检测
                         if ((DateTime.Now - _worker.LastActionTime).TotalMinutes >= 3)
                         {
-                            _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⏳ 加点界面卡死超过3分钟，完成任务");
+                            MarkTaskFailed("⏳ 三分钟没识别到任务，防卡死触发");
                             return;
                         }
 
@@ -88,16 +110,18 @@ namespace OLA
                         await _worker.SmartSleep(1000);
                     }
                 }
+
                 if (await _worker.OL_CmpColor("554,116,a78f60|563,22,d1dbe3|840,23,d1dde7|469,146,a7a7a7", 554, 117, 500))
                 {
                     await _worker.SmartSleep(1000);
+
                     while (true)
                     {
                         if (!await _worker.SmartSleep(100)) return;
 
                         if ((DateTime.Now - _worker.LastActionTime).TotalMinutes >= 3)
                         {
-                            _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⏳ 30级子流程卡死超过3分钟，完成任务");
+                            MarkTaskFailed("⏳ 三分钟没识别到任务，防卡死触发");
                             return;
                         }
 
@@ -108,7 +132,6 @@ namespace OLA
                     }
                 }
 
-
                 if (await _worker.OL_CmpColor("776,21,32435c|794,12,efe1d3|793,30,e1d9cf|819,12,f3e7db|783,475,e9ebeb|783,484,edefef|837,485,efefef|934,18,919187", 810, 478, 500)) continue;
                 if (await _worker.OL_CmpColor("807,475,ffffff|805,482,f7f7f7|794,13,f1e7db|819,12,f3e7db|933,16,959587", 807, 477, 500)) continue;
                 if (await _worker.OL_CmpColor("783,430,d90505|841,430,0000e3|759,72,fbfbfb|786,70,f3f3f3|934,16,959587", 810, 477, 500)) continue;
@@ -117,14 +140,13 @@ namespace OLA
                 if (await _worker.OL_CmpColor("841,430,0000e3|780,428,f10000|802,70,fdfdfb|801,22,ede7db|828,20,ede7db", 810, 478, 500)) continue;
                 if (await _worker.OL_CmpColor("424,403,62e303|424,436,6cf903|466,459,f7b164|775,511,b92e2c|905,520,edefef", 910, 519, 500)) continue;
                 if (await _worker.OL_CmpColor("819,13,ede7db|827,476,efefef|790,480,f1f3f3|824,437,dbdbdb", 807, 478, 500)) continue;
-
                 if (await _worker.OL_MatchWindowsFromPath(557, 166, 669, 204, "新手启程礼.bmp", 575, 359, 500)) continue;
                 if (await _worker.OL_MatchWindowsFromPath(0, 0, 960, 540, "立即启动.bmp", 478, 395, 3000)) continue;
                 if (await _worker.OL_MatchWindowsFromPath(445, 476, 516, 498, "开始游戏.bmp", 481, 485, 3000)) continue;
-
                 if (await _worker.OL_CmpColor("41,115,bd972c|41,113,bd972c|41,110,bf972c", 100, 111, 2000)) continue;
                 if (await _worker.OL_CmpColor("235,174,dfd5a3|156,207,fff3bf|73,126,f1e7b7|759,184,b5afa3", 782, 476, 2000)) continue;
             }
+
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "主线任务结束", _worker.CurrentBindHwnd.ToString());
         }
 
@@ -132,16 +154,16 @@ namespace OLA
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "准备日常...", _worker.CurrentBindHwnd.ToString());
             _worker.EnsureGameRunning();
+
             if (!await _worker.SmartSleep(3000)) return;
 
             while (true)
             {
                 if (!await _worker.SmartSleep(1000)) return;
 
-                // 【新增】防卡死检测
                 if ((DateTime.Now - _worker.LastActionTime).TotalMinutes >= 3)
                 {
-                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⏳ 日常任务卡死超过3分钟，自动完成");
+                    MarkTaskFailed("⏳ 三分钟没识别到任务，防卡死触发");
                     return;
                 }
 
@@ -151,11 +173,10 @@ namespace OLA
                 var rewardRes = _worker.Ola.MatchWindowsFromPath(0, 0, 1280, 720, @"daily\get_reward.bmp", 0.9, 0, 0, 1.0);
                 if (rewardRes.MatchState)
                 {
-                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 💰 领取日常奖励");
+                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 领取日常奖励");
                     await _worker.OL_LeftClick(rewardRes.X, rewardRes.Y);
                     await _worker.SmartSleep(1500);
                 }
-                if (false) break;
             }
         }
 
@@ -163,6 +184,7 @@ namespace OLA
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "自动签到中...", _worker.CurrentBindHwnd.ToString());
             _worker.EnsureGameRunning();
+
             if (!await _worker.SmartSleep(3000)) return;
 
             await _worker.OL_MatchWindowsFromPath(0, 0, 1280, 720, "关闭弹窗.bmp", 1200, 50, 1000);
@@ -173,7 +195,9 @@ namespace OLA
             {
                 await _worker.OL_LeftClick(iconRes.X, iconRes.Y);
                 await _worker.SmartSleep(2000);
+
                 _worker.StatusCallback?.Invoke(_worker.RowIndex, "点击签到按钮", _worker.CurrentBindHwnd.ToString());
+
                 int cx, cy;
                 if (_worker.Ola.FindStr(0, 0, 1280, 720, "签到", "ffffff-202020", "无尽黑暗.txt", 0.8, out cx, out cy) != -1)
                 {
@@ -181,23 +205,26 @@ namespace OLA
                     await _worker.SmartSleep(1000);
                 }
             }
-            else { _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⚠️ 未找到签到图标"); }
+            else
+            {
+                _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⚠️ 未找到签到图标");
+            }
         }
 
         private async Task SideQuest()
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "执行支线中...", _worker.CurrentBindHwnd.ToString());
             _worker.EnsureGameRunning();
+
             if (!await _worker.SmartSleep(3000)) return;
 
             while (true)
             {
                 if (!await _worker.SmartSleep(1000)) return;
 
-                // 【新增】防卡死检测
                 if ((DateTime.Now - _worker.LastActionTime).TotalMinutes >= 3)
                 {
-                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⏳ 支线任务卡死超过3分钟，自动完成");
+                    MarkTaskFailed("⏳ 三分钟没识别到任务，防卡死触发");
                     return;
                 }
 
@@ -207,11 +234,15 @@ namespace OLA
                 string ocrText = _worker.OL_OcrFromDict(50, 200, 350, 600, "ffffff-101010");
                 if (ocrText.Contains("支线"))
                 {
-                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 🔍 发现任务文本: {ocrText}");
+                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 发现任务文本: {ocrText}");
                     await _worker.OL_LeftClick(100, 250, 15);
                     await _worker.SmartSleep(5000);
                 }
-                else { _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ✅ 暂无支线任务"); break; }
+                else
+                {
+                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ✅ 暂无支线任务");
+                    break;
+                }
             }
         }
 
@@ -219,6 +250,7 @@ namespace OLA
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "开始挂机...", _worker.CurrentBindHwnd.ToString());
             _worker.EnsureGameRunning();
+
             if (!await _worker.SmartSleep(3000)) return;
 
             await _worker.OL_CmpColor("800,600,FF00FF", 800, 600, 500);
@@ -230,7 +262,6 @@ namespace OLA
                 await _worker.OL_LeftClick(autoRes.X, autoRes.Y);
             }
 
-            // 注：挂机任务特意不加3分钟超时，因为挂机本身就是要一直挂着检测重连的。
             while (true)
             {
                 if (!await _worker.SmartSleep(5000)) return;

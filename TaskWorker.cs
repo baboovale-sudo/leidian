@@ -1,9 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using OLAPlug;
 
 namespace OLA
@@ -16,7 +16,6 @@ namespace OLA
         public string EmulatorBasePath { get; set; }
         public string PackageName { get; set; } = "com.xy.sh.wjsy5774";
         public List<string> TaskList { get; set; } = new List<string>();
-
         public WorkerState RunState { get; private set; } = WorkerState.Idle;
         public DateTime LastStartTime { get; private set; }
         public DateTime LastActionTime { get; set; } = DateTime.Now;
@@ -28,6 +27,7 @@ namespace OLA
         private CancellationToken _currentToken;
         private string _lastStatusMsg = "";
         private string _lastExceptionMsg = "";
+        private bool _keepUnfinishedStatus = false;
         private readonly Random _rnd = new Random();
 
         private const int DefaultClickDelay = 1000;
@@ -44,7 +44,11 @@ namespace OLA
             EmulatorName = name;
             EmulatorClass = className;
             EmulatorBasePath = path;
-            if (!string.IsNullOrEmpty(packageName)) PackageName = packageName;
+
+            if (!string.IsNullOrEmpty(packageName))
+            {
+                PackageName = packageName;
+            }
         }
 
         #region 生命周期控制
@@ -53,9 +57,11 @@ namespace OLA
         {
             if (RunState == WorkerState.Running) return;
 
+            _keepUnfinishedStatus = false;
             RunState = WorkerState.Running;
             LastStartTime = DateTime.Now;
             LastActionTime = DateTime.Now;
+
             UpdateException("等待60秒监控介入...");
 
             _logicTokenSource?.Dispose();
@@ -135,6 +141,12 @@ namespace OLA
             });
         }
 
+        public void MarkCurrentTaskUnfinished()
+        {
+            _keepUnfinishedStatus = true;
+            UpdateStatus("未完成", CurrentBindHwnd.ToString());
+        }
+
         #endregion
 
         #region 逻辑线程核心
@@ -176,12 +188,15 @@ namespace OLA
                     }
 
                     UpdateException("等待60秒监控介入...");
+
                     int retry = 0;
                     while (parentHwnd == 0 && retry < 30)
                     {
                         if (token.IsCancellationRequested) return;
+
                         parentHwnd = FindWindowWithPlugin();
                         if (parentHwnd != 0) break;
+
                         await Task.Delay(1000, token);
                         retry++;
                     }
@@ -199,8 +214,10 @@ namespace OLA
                 while (RunState != WorkerState.Stopped && childHwnd == 0)
                 {
                     if (token.IsCancellationRequested) return;
+
                     childHwnd = _ola!.GetWindow(parentHwnd, 1);
                     if (childHwnd != 0) break;
+
                     await Task.Delay(1000, token);
                 }
 
@@ -228,7 +245,10 @@ namespace OLA
                     }
                     catch (Exception ex)
                     {
-                        if (!token.IsCancellationRequested) LogError($"逻辑异常: {ex.Message}");
+                        if (!token.IsCancellationRequested)
+                        {
+                            LogError($"逻辑异常: {ex.Message}");
+                        }
                     }
 
                     RunState = WorkerState.Stopped;
@@ -244,7 +264,10 @@ namespace OLA
             }
             catch (Exception ex)
             {
-                if (!token.IsCancellationRequested) LogError($"异常: {ex.Message}");
+                if (!token.IsCancellationRequested)
+                {
+                    LogError($"异常: {ex.Message}");
+                }
             }
             finally
             {
@@ -265,13 +288,20 @@ namespace OLA
             }
 
             var gameTask = new GameTask(this);
+            bool allCompleted = true;
 
             foreach (var taskName in TaskList)
             {
                 await CheckPauseStateAsync();
-                if (RunState == WorkerState.Stopped) break;
+
+                if (RunState == WorkerState.Stopped)
+                {
+                    allCompleted = false;
+                    break;
+                }
 
                 WriteLog($"======= 开始执行: {taskName} =======");
+                UpdateStatus($"执行中: {taskName}", currentHwnd.ToString());
 
                 try
                 {
@@ -279,20 +309,47 @@ namespace OLA
                 }
                 catch (OperationCanceledException)
                 {
+                    allCompleted = false;
+                    WriteLog("任务取消，线程结束");
                     throw;
                 }
                 catch (Exception ex)
                 {
-                    WriteLog($"任务[{taskName}]出错: {ex.Message}");
+                    allCompleted = false;
+                    _keepUnfinishedStatus = true;
+                    WriteLog($"{taskName} 未完成");
+                    WriteLog($"任务[{taskName}]异常: {ex.Message}");
+                    WriteLog("线程结束");
+                    UpdateStatus("未完成", currentHwnd.ToString());
+                    break;
                 }
 
-                if (RunState == WorkerState.Stopped) break;
+                if (RunState == WorkerState.Stopped)
+                {
+                    allCompleted = false;
+                    WriteLog($"{taskName} 未完成");
+                    WriteLog("线程结束");
+                    UpdateStatus("未完成", currentHwnd.ToString());
+                    break;
+                }
+
+                if (!gameTask.LastTaskCompleted)
+                {
+                    allCompleted = false;
+                    _keepUnfinishedStatus = true;
+                    WriteLog($"{taskName} 未完成");
+                    WriteLog("线程结束");
+                    UpdateStatus("未完成", currentHwnd.ToString());
+                    break;
+                }
 
                 WriteLog($"{taskName} 已完成");
+                UpdateStatus("已完成", currentHwnd.ToString());
+
                 await Task.Delay(1000, token);
             }
 
-            if (RunState != WorkerState.Stopped)
+            if (RunState != WorkerState.Stopped && allCompleted)
             {
                 UpdateStatus("任务已全部完成", currentHwnd.ToString());
                 WriteLog("所有任务已完成");
@@ -304,9 +361,13 @@ namespace OLA
         #region OL_SDK 封装方法
 
         public async Task<bool> OL_MatchWindowsFromPath(
-            int x1, int y1, int x2, int y2,
+            int x1,
+            int y1,
+            int x2,
+            int y2,
             string imgName,
-            int targetX, int targetY,
+            int targetX,
+            int targetY,
             int delay = DefaultClickDelay,
             int offset = DefaultClickOffset,
             double sim = DefaultImageSimilarity)
@@ -355,7 +416,10 @@ namespace OLA
         }
 
         public async Task<bool> OL_FindStr(
-            int x1, int y1, int x2, int y2,
+            int x1,
+            int y1,
+            int x2,
+            int y2,
             string text,
             string color,
             int delay = DefaultClickDelay)
@@ -373,7 +437,10 @@ namespace OLA
         }
 
         public async Task<bool> OL_FindStr(
-            int x1, int y1, int x2, int y2,
+            int x1,
+            int y1,
+            int x2,
+            int y2,
             string text,
             string color,
             int clickX,
@@ -664,7 +731,11 @@ namespace OLA
 
             if (RunState == WorkerState.Stopped)
             {
-                UpdateStatus("已停止", "0");
+                if (!_keepUnfinishedStatus)
+                {
+                    UpdateStatus("已停止", "0");
+                }
+
                 UpdateException("");
             }
         }
