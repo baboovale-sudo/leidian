@@ -190,10 +190,10 @@ namespace OLA
             tabPage1.Controls.Add(label3);
             tabPage1.Controls.Add(模拟器选择);
             tabPage1.Controls.Add(label1);
-            tabPage1.Location = new Point(4, 29);
+            tabPage1.Location = new Point(4, 26);
             tabPage1.Name = "tabPage1";
             tabPage1.Padding = new Padding(3);
-            tabPage1.Size = new Size(591, 170);
+            tabPage1.Size = new Size(592, 174);
             tabPage1.TabIndex = 0;
             tabPage1.Text = "基础设置";
             tabPage1.UseVisualStyleBackColor = true;
@@ -232,7 +232,7 @@ namespace OLA
             yixuan_renwu.FormattingEnabled = true;
             yixuan_renwu.Location = new Point(498, 32);
             yixuan_renwu.Name = "yixuan_renwu";
-            yixuan_renwu.Size = new Size(85, 138);
+            yixuan_renwu.Size = new Size(85, 123);
             yixuan_renwu.TabIndex = 16;
             // 
             // renwu_liebiao
@@ -241,7 +241,7 @@ namespace OLA
             renwu_liebiao.Items.AddRange(new object[] { "主线任务", "支线任务", "每日活跃", "每日签到", "挂机任务" });
             renwu_liebiao.Location = new Point(395, 32);
             renwu_liebiao.Name = "renwu_liebiao";
-            renwu_liebiao.Size = new Size(85, 138);
+            renwu_liebiao.Size = new Size(85, 123);
             renwu_liebiao.TabIndex = 15;
             // 
             // label6
@@ -249,7 +249,7 @@ namespace OLA
             label6.AutoSize = true;
             label6.Location = new Point(513, 17);
             label6.Name = "label6";
-            label6.Size = new Size(63, 19);
+            label6.Size = new Size(56, 17);
             label6.TabIndex = 14;
             label6.Text = "已选任务";
             // 
@@ -258,7 +258,7 @@ namespace OLA
             label2.AutoSize = true;
             label2.Location = new Point(410, 17);
             label2.Name = "label2";
-            label2.Size = new Size(63, 19);
+            label2.Size = new Size(56, 17);
             label2.TabIndex = 13;
             label2.Text = "任务列表";
             // 
@@ -267,7 +267,7 @@ namespace OLA
             shifou_huanhao.AutoSize = true;
             shifou_huanhao.Location = new Point(225, 41);
             shifou_huanhao.Name = "shifou_huanhao";
-            shifou_huanhao.Size = new Size(84, 24);
+            shifou_huanhao.Size = new Size(75, 21);
             shifou_huanhao.TabIndex = 12;
             shifou_huanhao.Text = "是否换号";
             shifou_huanhao.UseVisualStyleBackColor = true;
@@ -277,7 +277,7 @@ namespace OLA
             shifou_zhiding.AutoSize = true;
             shifou_zhiding.Location = new Point(316, 10);
             shifou_zhiding.Name = "shifou_zhiding";
-            shifou_zhiding.Size = new Size(84, 24);
+            shifou_zhiding.Size = new Size(75, 21);
             shifou_zhiding.TabIndex = 11;
             shifou_zhiding.Text = "是否置顶";
             shifou_zhiding.UseVisualStyleBackColor = true;
@@ -287,7 +287,7 @@ namespace OLA
             zidong_denglu.AutoSize = true;
             zidong_denglu.Location = new Point(225, 10);
             zidong_denglu.Name = "zidong_denglu";
-            zidong_denglu.Size = new Size(84, 24);
+            zidong_denglu.Size = new Size(75, 21);
             zidong_denglu.TabIndex = 10;
             zidong_denglu.Text = "自动登录";
             zidong_denglu.UseVisualStyleBackColor = true;
@@ -299,14 +299,14 @@ namespace OLA
             pailie_fangshi.Items.AddRange(new object[] { "平铺排序", "隐藏窗口" });
             pailie_fangshi.Location = new Point(80, 137);
             pailie_fangshi.Name = "pailie_fangshi";
-            pailie_fangshi.Size = new Size(136, 28);
+            pailie_fangshi.Size = new Size(136, 25);
             pailie_fangshi.TabIndex = 9;
             // 
             // lujing_shuru
             // 
             lujing_shuru.Location = new Point(80, 104);
             lujing_shuru.Name = "lujing_shuru";
-            lujing_shuru.Size = new Size(136, 26);
+            lujing_shuru.Size = new Size(136, 23);
             lujing_shuru.TabIndex = 8;
             lujing_shuru.Text = "D:\\leidian\\LDPlayer9";
             // 
@@ -316,7 +316,7 @@ namespace OLA
             qufu_xuanze.Items.AddRange(new object[] { "一区", "二区" });
             qufu_xuanze.Location = new Point(80, 73);
             qufu_xuanze.Name = "qufu_xuanze";
-            qufu_xuanze.Size = new Size(136, 28);
+            qufu_xuanze.Size = new Size(136, 25);
             qufu_xuanze.TabIndex = 7;
             // 
             // moniqi_xuanze
@@ -325,7 +325,7 @@ namespace OLA
             moniqi_xuanze.Items.AddRange(new object[] { "雷电模拟器", "MuMu模拟器" });
             moniqi_xuanze.Location = new Point(80, 38);
             moniqi_xuanze.Name = "moniqi_xuanze";
-            moniqi_xuanze.Size = new Size(136, 28);
+            moniqi_xuanze.Size = new Size(136, 25);
             moniqi_xuanze.TabIndex = 6;
             moniqi_xuanze.Click += moniqi_xuanze_SelectedIndexChanged;
             // 
@@ -333,7 +333,7 @@ namespace OLA
             // 
             duokai_shuliang.Location = new Point(80, 7);
             duokai_shuliang.Name = "duokai_shuliang";
-            duokai_shuliang.Size = new Size(31, 26);
+            duokai_shuliang.Size = new Size(31, 23);
             duokai_shuliang.TabIndex = 5;
             // 
             // label5
@@ -341,7 +341,7 @@ namespace OLA
             label5.AutoSize = true;
             label5.Location = new Point(20, 143);
             label5.Name = "label5";
-            label5.Size = new Size(63, 19);
+            label5.Size = new Size(56, 17);
             label5.TabIndex = 4;
             label5.Text = "排列方式";
             // 
@@ -350,7 +350,7 @@ namespace OLA
             label4.AutoSize = true;
             label4.Location = new Point(47, 111);
             label4.Name = "label4";
-            label4.Size = new Size(36, 19);
+            label4.Size = new Size(32, 17);
             label4.TabIndex = 3;
             label4.Text = "路径";
             // 
@@ -359,7 +359,7 @@ namespace OLA
             label3.AutoSize = true;
             label3.Location = new Point(34, 80);
             label3.Name = "label3";
-            label3.Size = new Size(49, 19);
+            label3.Size = new Size(44, 17);
             label3.TabIndex = 2;
             label3.Text = "服务器";
             // 
@@ -368,7 +368,7 @@ namespace OLA
             模拟器选择.AutoSize = true;
             模拟器选择.Location = new Point(7, 45);
             模拟器选择.Name = "模拟器选择";
-            模拟器选择.Size = new Size(76, 19);
+            模拟器选择.Size = new Size(68, 17);
             模拟器选择.TabIndex = 1;
             模拟器选择.Text = "模拟器选择";
             // 
@@ -377,16 +377,16 @@ namespace OLA
             label1.AutoSize = true;
             label1.Location = new Point(20, 17);
             label1.Name = "label1";
-            label1.Size = new Size(63, 19);
+            label1.Size = new Size(56, 17);
             label1.TabIndex = 0;
             label1.Text = "多开数量";
             // 
             // tabPage2
             // 
-            tabPage2.Location = new Point(4, 29);
+            tabPage2.Location = new Point(4, 26);
             tabPage2.Name = "tabPage2";
             tabPage2.Padding = new Padding(3);
-            tabPage2.Size = new Size(591, 170);
+            tabPage2.Size = new Size(592, 174);
             tabPage2.TabIndex = 1;
             tabPage2.Text = "通用设置";
             tabPage2.UseVisualStyleBackColor = true;
@@ -441,15 +441,15 @@ namespace OLA
             // statusStrip1
             // 
             statusStrip1.Items.AddRange(new ToolStripItem[] { yunxingshijian });
-            statusStrip1.Location = new Point(0, 511);
+            statusStrip1.Location = new Point(0, 513);
             statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(785, 25);
+            statusStrip1.Size = new Size(785, 22);
             statusStrip1.TabIndex = 7;
             // 
             // yunxingshijian
             // 
             yunxingshijian.Name = "yunxingshijian";
-            yunxingshijian.Size = new Size(151, 19);
+            yunxingshijian.Size = new Size(135, 17);
             yunxingshijian.Text = "脚本运行时间: 00:00:00";
             // 
             // timer_runtime
@@ -472,7 +472,6 @@ namespace OLA
             Controls.Add(moniqi_liebiao);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             Name = "Form1";
-            Text = "武林外传_模拟器";
             Load += Form1_Load;
             ((System.ComponentModel.ISupportInitialize)moniqi_liebiao).EndInit();
             tabControl1.ResumeLayout(false);
