@@ -35,6 +35,15 @@ namespace OLA
 
         private readonly Random _rnd = new Random();
 
+        // ============================================================
+        // 默认参数统一配置区
+        // 后期如果想改所有封装函数的默认点击后等待时间，只改这里。
+        // 某一处需要单独等待更久时，在调用代码里额外传 delay 即可。
+        // ============================================================
+        private const int DefaultClickDelay = 1000;          // 默认点击后等待 1 秒
+        private const int DefaultClickOffset = 5;            // 默认点击随机偏移 ±5
+        private const double DefaultImageSimilarity = 0.85;  // 默认图片相似度
+
         public Action<string>? LogCallback;
         public Action<int, string, string>? StatusCallback;
         public Action<int, string>? ExceptionCallback;
@@ -344,7 +353,21 @@ namespace OLA
         // =======================================================================
 
         /// <summary>
-        /// 在当前绑定窗口的指定区域内查找图片，找到后自动点击指定坐标。
+        /// 在当前绑定窗口指定区域找图，找到后点击指定坐标。
+        /// <para>参数：</para>
+        /// <list type="bullet">
+        /// <item><description>x1, y1, x2, y2：找图区域。</description></item>
+        /// <item><description>imgName：图片文件名，例如 "开始游戏.bmp"。</description></item>
+        /// <item><description>targetX, targetY：找到图片后点击的坐标。</description></item>
+        /// <item><description>delay：点击后等待时间。默认 1000 毫秒，即 1 秒。</description></item>
+        /// <item><description>offset：点击随机偏移。默认 ±5。</description></item>
+        /// <item><description>sim：图片相似度。默认 0.85。</description></item>
+        /// </list>
+        /// <para>默认写法：</para>
+        /// <code>if (await _worker.OL_MatchWindowsFromPath(0, 0, 960, 540, "开始游戏.bmp", 481, 485)) continue;</code>
+        /// <para>单独修改写法：</para>
+        /// <code>if (await _worker.OL_MatchWindowsFromPath(0, 0, 960, 540, "开始游戏.bmp", 481, 485, 5000, 10, 0.9)) continue;</code>
+        /// <para>说明：5000 = 等 5 秒；10 = 偏移 ±10；0.9 = 相似度。</para>
         /// </summary>
         /// <param name="x1">查找区域左上角 X 坐标。</param>
         /// <param name="y1">查找区域左上角 Y 坐标。</param>
@@ -353,22 +376,10 @@ namespace OLA
         /// <param name="imgName">要查找的图片文件名，例如："开始游戏.bmp"。图片路径基于插件 SetPath 设置的目录。</param>
         /// <param name="targetX">找到图片后要点击的目标 X 坐标。</param>
         /// <param name="targetY">找到图片后要点击的目标 Y 坐标。</param>
-        /// <param name="delay">点击完成后的等待时间，单位毫秒。</param>
+        /// <param name="delay">点击完成后的等待时间，单位毫秒。默认 1000，即 1 秒。</param>
         /// <param name="offset">点击随机偏移范围，默认 5。实际点击坐标会在 ±offset 范围内随机浮动。</param>
         /// <param name="sim">图片相似度，默认 0.85。数值越高匹配越严格。</param>
         /// <returns>找到图片并完成点击返回 true；未找到图片返回 false。</returns>
-        /// <remarks>
-        /// 该方法适合用于按钮识别、界面状态判断、弹窗关闭、任务入口识别等场景。
-        /// 找图成功后会自动记录日志、执行随机偏移点击，并调用 SmartSleep 等待。
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// if (await _worker.OL_MatchWindowsFromPath(0, 0, 960, 540, "开始游戏.bmp", 481, 485, 3000))
-        /// {
-        ///     continue;
-        /// }
-        /// </code>
-        /// </example>
         public async Task<bool> OL_MatchWindowsFromPath(
             int x1,
             int y1,
@@ -377,9 +388,9 @@ namespace OLA
             string imgName,
             int targetX,
             int targetY,
-            int delay,
-            int offset = 5,
-            double sim = 0.85)
+            int delay = DefaultClickDelay,
+            int offset = DefaultClickOffset,
+            double sim = DefaultImageSimilarity)
         {
             var res = _ola!.MatchWindowsFromPath(x1, y1, x2, y2, imgName, sim, 0, 0, 1.0);
 
@@ -397,39 +408,32 @@ namespace OLA
         }
 
         /// <summary>
-        /// 判断多个屏幕坐标点的颜色是否全部匹配，全部匹配后自动点击指定坐标。
+        /// 判断多个屏幕坐标点颜色是否全部匹配，全部匹配后点击指定坐标。
+        /// <para>参数：</para>
+        /// <list type="bullet">
+        /// <item><description>pointsStr：多点颜色字符串，格式 "x,y,color|x,y,color"。</description></item>
+        /// <item><description>targetX, targetY：匹配成功后点击的坐标。</description></item>
+        /// <item><description>delay：点击后等待时间。默认 1000 毫秒，即 1 秒。</description></item>
+        /// <item><description>offset：点击随机偏移。默认 ±5。</description></item>
+        /// </list>
+        /// <para>默认写法：</para>
+        /// <code>if (await _worker.OL_CmpColor("514,116,a37b20|520,116,8d6d21", 939, 22)) break;</code>
+        /// <para>单独修改写法：</para>
+        /// <code>if (await _worker.OL_CmpColor("514,116,a37b20|520,116,8d6d21", 939, 22, 5000, 10)) break;</code>
+        /// <para>说明：5000 = 等 5 秒；10 = 偏移 ±10。</para>
         /// </summary>
-        /// <param name="pointsStr">
-        /// 多点颜色字符串，格式为："x,y,color|x,y,color|x,y,color"。
-        /// 例如："514,116,a37b20|520,116,8d6d21|840,22,d7e1eb"。
-        /// </param>
+        /// <param name="pointsStr">多点颜色字符串，格式为："x,y,color|x,y,color|x,y,color"。</param>
         /// <param name="targetX">颜色匹配成功后要点击的目标 X 坐标。</param>
         /// <param name="targetY">颜色匹配成功后要点击的目标 Y 坐标。</param>
-        /// <param name="delay">点击完成后的等待时间，单位毫秒。</param>
+        /// <param name="delay">点击完成后的等待时间，单位毫秒。默认 1000，即 1 秒。</param>
         /// <param name="offset">点击随机偏移范围，默认 5。</param>
         /// <returns>所有颜色点都匹配并完成点击返回 true；任意一个点不匹配返回 false。</returns>
-        /// <remarks>
-        /// 该方法适合用于判断固定 UI 状态，例如按钮是否出现、弹窗是否存在、界面是否切换完成。
-        /// 只要任意一个颜色点不匹配，就会直接返回 false。
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// if (await _worker.OL_CmpColor(
-        ///     "514,116,a37b20|520,116,8d6d21|840,22,d7e1eb",
-        ///     939,
-        ///     22,
-        ///     500))
-        /// {
-        ///     break;
-        /// }
-        /// </code>
-        /// </example>
         public async Task<bool> OL_CmpColor(
             string pointsStr,
             int targetX,
             int targetY,
-            int delay,
-            int offset = 5)
+            int delay = DefaultClickDelay,
+            int offset = DefaultClickOffset)
         {
             if (string.IsNullOrEmpty(pointsStr))
                 return false;
@@ -462,7 +466,19 @@ namespace OLA
         }
 
         /// <summary>
-        /// 在指定区域内通过字库查找文字，找到后点击文字所在位置。
+        /// 在指定区域通过字库找文字，找到后点击文字所在位置。
+        /// <para>参数：</para>
+        /// <list type="bullet">
+        /// <item><description>x1, y1, x2, y2：找字区域。</description></item>
+        /// <item><description>text：要查找的文字。</description></item>
+        /// <item><description>color：文字颜色或偏色配置，例如 "e3dbcb-303030"。</description></item>
+        /// <item><description>delay：点击后等待时间。默认 1000 毫秒，即 1 秒。</description></item>
+        /// </list>
+        /// <para>默认写法：</para>
+        /// <code>if (await _worker.OL_FindStr(87, 328, 117, 350, "幻术园", "e3dbcb-303030")) continue;</code>
+        /// <para>单独修改写法：</para>
+        /// <code>if (await _worker.OL_FindStr(87, 328, 117, 350, "幻术园", "e3dbcb-303030", 5000)) continue;</code>
+        /// <para>说明：5000 = 点击后等待 5 秒。</para>
         /// </summary>
         /// <param name="x1">查找区域左上角 X 坐标。</param>
         /// <param name="y1">查找区域左上角 Y 坐标。</param>
@@ -470,20 +486,8 @@ namespace OLA
         /// <param name="y2">查找区域右下角 Y 坐标。</param>
         /// <param name="text">要查找的文字内容。</param>
         /// <param name="color">文字颜色或偏色配置，例如："e3dbcb-303030"。</param>
-        /// <param name="delay">点击完成后的等待时间，单位毫秒。</param>
+        /// <param name="delay">点击完成后的等待时间，单位毫秒。默认 1000，即 1 秒。</param>
         /// <returns>找到文字并点击成功返回 true；未找到文字返回 false。</returns>
-        /// <remarks>
-        /// 当前封装固定使用字库文件 "无尽黑暗.txt"，相似度为 0.8。
-        /// 适合用于点击菜单文字、地图文字、任务文字、按钮文字等。
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// if (await _worker.OL_FindStr(87, 328, 117, 350, "幻术园", "e3dbcb-303030", 500))
-        /// {
-        ///     continue;
-        /// }
-        /// </code>
-        /// </example>
         public async Task<bool> OL_FindStr(
             int x1,
             int y1,
@@ -491,7 +495,7 @@ namespace OLA
             int y2,
             string text,
             string color,
-            int delay)
+            int delay = DefaultClickDelay)
         {
             int x, y;
 
@@ -509,7 +513,20 @@ namespace OLA
         }
 
         /// <summary>
-        /// 在指定区域内通过字库查找文字，找到后点击指定坐标。
+        /// 在指定区域通过字库找文字，找到后点击指定固定坐标。
+        /// <para>参数：</para>
+        /// <list type="bullet">
+        /// <item><description>x1, y1, x2, y2：找字区域。</description></item>
+        /// <item><description>text：要查找的文字。</description></item>
+        /// <item><description>color：文字颜色或偏色配置，例如 "ada187-101010"。</description></item>
+        /// <item><description>clickX, clickY：找到文字后点击的固定坐标。</description></item>
+        /// <item><description>delay：点击后等待时间。默认 1000 毫秒，即 1 秒。</description></item>
+        /// </list>
+        /// <para>默认写法：</para>
+        /// <code>if (await _worker.OL_FindStr(78, 36, 91, 49, "等级达到30", "ada187-101010", 871, 79)) break;</code>
+        /// <para>单独修改写法：</para>
+        /// <code>if (await _worker.OL_FindStr(78, 36, 91, 49, "等级达到30", "ada187-101010", 871, 79, 5000)) break;</code>
+        /// <para>说明：5000 = 点击后等待 5 秒。</para>
         /// </summary>
         /// <param name="x1">查找区域左上角 X 坐标。</param>
         /// <param name="y1">查找区域左上角 Y 坐标。</param>
@@ -519,26 +536,8 @@ namespace OLA
         /// <param name="color">文字颜色或偏色配置，例如："ada187-101010"。</param>
         /// <param name="clickX">找到文字后要点击的指定 X 坐标。</param>
         /// <param name="clickY">找到文字后要点击的指定 Y 坐标。</param>
-        /// <param name="delay">点击完成后的等待时间，单位毫秒。</param>
+        /// <param name="delay">点击完成后的等待时间，单位毫秒。默认 1000，即 1 秒。</param>
         /// <returns>找到文字并完成指定坐标点击返回 true；未找到文字返回 false。</returns>
-        /// <remarks>
-        /// 该重载适合“文字只作为判断条件，但实际点击固定按钮”的场景。
-        /// 例如识别到任务文本后，点击右上角关闭按钮或固定确认按钮。
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// if (await _worker.OL_FindStr(
-        ///     78, 36, 91, 49,
-        ///     "等级达到30",
-        ///     "ada187-101010",
-        ///     871,
-        ///     79,
-        ///     500))
-        /// {
-        ///     break;
-        /// }
-        /// </code>
-        /// </example>
         public async Task<bool> OL_FindStr(
             int x1,
             int y1,
@@ -548,7 +547,7 @@ namespace OLA
             string color,
             int clickX,
             int clickY,
-            int delay)
+            int delay = DefaultClickDelay)
         {
             int x, y;
 
@@ -567,6 +566,14 @@ namespace OLA
 
         /// <summary>
         /// 使用内置字库识别指定区域内的文字。
+        /// <para>参数：</para>
+        /// <list type="bullet">
+        /// <item><description>x1, y1, x2, y2：识别区域。</description></item>
+        /// <item><description>color：文字颜色或偏色配置，例如 "e3dbcb-303030"。</description></item>
+        /// </list>
+        /// <para>写法：</para>
+        /// <code>string text = _worker.OL_OcrFromDict(80, 30, 200, 60, "e3dbcb-303030");</code>
+        /// <para>返回：识别到的字符串；没有识别到返回空字符串。</para>
         /// </summary>
         /// <param name="x1">识别区域左上角 X 坐标。</param>
         /// <param name="y1">识别区域左上角 Y 坐标。</param>
@@ -574,20 +581,6 @@ namespace OLA
         /// <param name="y2">识别区域右下角 Y 坐标。</param>
         /// <param name="color">文字颜色或偏色配置，例如："e3dbcb-303030"。</param>
         /// <returns>返回识别到的字符串；如果没有识别到内容，则返回空字符串。</returns>
-        /// <remarks>
-        /// 当前封装固定使用字库文件 "无尽黑暗.txt"，相似度为 0.8。
-        /// 适合读取等级、地图名、任务文本、按钮文字等区域内容。
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// string text = _worker.OL_OcrFromDict(80, 30, 200, 60, "e3dbcb-303030");
-        ///
-        /// if (text.Contains("等级"))
-        /// {
-        ///     // 执行等级相关逻辑
-        /// }
-        /// </code>
-        /// </example>
         public string OL_OcrFromDict(
             int x1,
             int y1,
@@ -601,26 +594,22 @@ namespace OLA
 
         /// <summary>
         /// 在指定坐标附近执行一次左键点击，并自动加入随机偏移。
+        /// <para>参数：</para>
+        /// <list type="bullet">
+        /// <item><description>x, y：目标点击坐标。</description></item>
+        /// <item><description>range：随机偏移范围。默认 ±5。</description></item>
+        /// </list>
+        /// <para>默认写法：</para>
+        /// <code>await _worker.OL_LeftClick(481, 485);</code>
+        /// <para>单独修改写法：</para>
+        /// <code>await _worker.OL_LeftClick(481, 485, 10);</code>
+        /// <para>说明：10 = 点击随机偏移 ±10。</para>
         /// </summary>
         /// <param name="x">目标 X 坐标。</param>
         /// <param name="y">目标 Y 坐标。</param>
-        /// <param name="range">
-        /// 随机偏移范围，默认 5。
-        /// 实际点击坐标会在 x±range、y±range 范围内随机生成。
-        /// </param>
+        /// <param name="range">随机偏移范围，默认 5。实际点击坐标会在 x±range、y±range 范围内随机生成。</param>
         /// <returns>异步点击任务。</returns>
-        /// <remarks>
-        /// 每次调用都会更新 LastActionTime，用于防卡死检测。
-        /// 点击过程包含：MoveTo → LeftDown → 随机短延迟 → LeftUp。
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// await _worker.OL_LeftClick(481, 485);
-        ///
-        /// await _worker.OL_LeftClick(810, 478, 10);
-        /// </code>
-        /// </example>
-        public async Task OL_LeftClick(int x, int y, int range = 5)
+        public async Task OL_LeftClick(int x, int y, int range = DefaultClickOffset)
         {
             LastActionTime = DateTime.Now;
 
@@ -639,22 +628,17 @@ namespace OLA
         }
 
         /// <summary>
-        /// 智能延迟等待，在等待前后自动检查暂停、恢复、停止和取消状态。
+        /// 智能延迟等待，会自动检查暂停、恢复、停止和取消状态。
+        /// <para>参数：</para>
+        /// <list type="bullet">
+        /// <item><description>ms：等待时间，单位毫秒。</description></item>
+        /// </list>
+        /// <para>写法：</para>
+        /// <code>if (!await _worker.SmartSleep(1000)) return;</code>
+        /// <para>说明：1000 = 等待 1 秒。</para>
         /// </summary>
         /// <param name="ms">等待时间，单位毫秒。</param>
         /// <returns>正常等待完成返回 true；如果任务被停止、取消或中断，返回 false。</returns>
-        /// <remarks>
-        /// 推荐在任务循环中使用 SmartSleep，而不是直接使用 Task.Delay。
-        /// 这样可以保证暂停、停止按钮能够及时生效。
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// if (!await _worker.SmartSleep(1000))
-        /// {
-        ///     return;
-        /// }
-        /// </code>
-        /// </example>
         public async Task<bool> SmartSleep(int ms)
         {
             try
@@ -683,22 +667,11 @@ namespace OLA
 
         /// <summary>
         /// 确保游戏进程处于启动状态。
+        /// <para>当前主要支持雷电模拟器。</para>
+        /// <para>会根据 EmulatorName 解析模拟器索引，然后调用 ldconsole.exe 启动指定 PackageName。</para>
+        /// <para>写法：</para>
+        /// <code>_worker.EnsureGameRunning();</code>
         /// </summary>
-        /// <remarks>
-        /// 当前主要支持雷电模拟器。
-        /// 方法会根据 EmulatorName 解析模拟器索引，
-        /// 然后调用 ldconsole.exe 执行 launchex 命令，启动指定 PackageName。
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// _worker.EnsureGameRunning();
-        ///
-        /// if (!await _worker.SmartSleep(5000))
-        /// {
-        ///     return;
-        /// }
-        /// </code>
-        /// </example>
         public void EnsureGameRunning()
         {
             if (EmulatorName.Contains("雷电"))
