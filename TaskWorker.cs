@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -17,157 +17,121 @@ namespace OLA
         public string PackageName { get; set; } = "com.xy.sh.wjsy5774";
         public List<string> TaskList { get; set; } = new List<string>();
 
-        public int RunState { get; private set; } = 0;
+        public WorkerState RunState { get; private set; } = WorkerState.Idle;
         public DateTime LastStartTime { get; private set; }
-
-        // 防卡死：记录最后一次有效动作的时间
         public DateTime LastActionTime { get; set; } = DateTime.Now;
-
         public OLAPlugServer Ola => _ola!;
         public long CurrentBindHwnd { get; private set; } = 0;
 
         private OLAPlugServer? _ola = null;
         private CancellationTokenSource? _logicTokenSource;
         private CancellationToken _currentToken;
-
         private string _lastStatusMsg = "";
         private string _lastExceptionMsg = "";
-
         private readonly Random _rnd = new Random();
 
-        // ============================================================
-        // 默认参数统一配置区
-        // 后期如果想改所有封装函数的默认点击后等待时间，只改这里。
-        // 某一处需要单独等待更久时，在调用代码里额外传 delay 即可。
-        // ============================================================
-        private const int DefaultClickDelay = 1000;          // 默认点击后等待 1 秒
-        private const int DefaultClickOffset = 5;            // 默认点击随机偏移 ±5
-        private const double DefaultImageSimilarity = 0.85;  // 默认图片相似度
+        private const int DefaultClickDelay = 1000;
+        private const int DefaultClickOffset = 5;
+        private const double DefaultImageSimilarity = 0.85;
 
         public Action<string>? LogCallback;
         public Action<int, string, string>? StatusCallback;
         public Action<int, string>? ExceptionCallback;
 
-        /// <summary>
-        /// 创建一个模拟器任务执行器实例。
-        /// </summary>
-        /// <param name="row">当前任务所在表格行号。</param>
-        /// <param name="name">模拟器窗口标题，例如："雷电模拟器-0"。</param>
-        /// <param name="className">模拟器窗口类名。</param>
-        /// <param name="path">模拟器安装目录。</param>
-        /// <param name="packageName">游戏包名。为空时使用默认包名。</param>
         public TaskWorker(int row, string name, string className, string path, string packageName = "")
         {
             RowIndex = row;
             EmulatorName = name;
             EmulatorClass = className;
             EmulatorBasePath = path;
-
-            if (!string.IsNullOrEmpty(packageName))
-                PackageName = packageName;
+            if (!string.IsNullOrEmpty(packageName)) PackageName = packageName;
         }
 
         #region 生命周期控制
 
-        /// <summary>
-        /// 启动当前任务线程。
-        /// </summary>
-        /// <remarks>
-        /// 如果当前已经处于运行状态，则不会重复启动。
-        /// 启动后会创建插件对象、启动或查找模拟器窗口、绑定窗口，并按 TaskList 顺序执行任务。
-        /// </remarks>
         public void Start()
         {
-            if (RunState == 1) return;
+            if (RunState == WorkerState.Running) return;
 
-            RunState = 1;
+            RunState = WorkerState.Running;
             LastStartTime = DateTime.Now;
             LastActionTime = DateTime.Now;
-
             UpdateException("等待60秒监控介入...");
 
+            _logicTokenSource?.Dispose();
             _logicTokenSource = new CancellationTokenSource();
             var token = _logicTokenSource.Token;
 
             Task.Run(async () => await RunLogicThread(token), token);
         }
 
-        /// <summary>
-        /// 停止当前任务线程，并请求取消所有异步等待。
-        /// </summary>
         public void Stop()
         {
-            RunState = 4;
+            RunState = WorkerState.Stopped;
             _logicTokenSource?.Cancel();
-
             UpdateStatus("已停止", "0");
             UpdateException("");
         }
 
-        /// <summary>
-        /// 暂停当前正在运行的任务。
-        /// </summary>
         public void Pause()
         {
-            if (RunState == 1)
+            if (RunState == WorkerState.Running)
             {
-                RunState = 2;
+                RunState = WorkerState.Paused;
                 UpdateStatus("已暂停", "");
             }
         }
 
-        /// <summary>
-        /// 恢复已经暂停的任务。
-        /// </summary>
         public void Resume()
         {
-            if (RunState == 2)
+            if (RunState == WorkerState.Paused)
             {
-                RunState = 3;
+                RunState = WorkerState.Resuming;
             }
         }
 
-        /// <summary>
-        /// 判断当前插件对象和模拟器窗口是否仍然有效。
-        /// </summary>
-        /// <returns>插件对象存在且能找到窗口返回 true；否则返回 false。</returns>
         public bool IsAlive()
         {
-            return _ola != null && FindWindowWithPlugin() != 0;
+            try
+            {
+                return _ola != null && FindWindowWithPlugin() != 0;
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"存活检测异常: {ex.Message}");
+                return false;
+            }
         }
 
-        /// <summary>
-        /// 标记当前任务已进入监控状态。
-        /// </summary>
         public void MarkAsMonitored()
         {
             if (_lastExceptionMsg.Contains("等待") || _lastExceptionMsg.Contains("监控"))
+            {
                 UpdateException("监控中");
+            }
         }
 
-        /// <summary>
-        /// 执行模拟器重启流程。
-        /// </summary>
-        /// <remarks>
-        /// 会先取消当前任务，关闭模拟器，等待 3 秒后重新调用 Start。
-        /// </remarks>
         public void PerformRestart()
         {
+            if (RunState == WorkerState.Stopped) return;
+
             Task.Run(async () =>
             {
-                UpdateStatus("掉线重连", "0");
-                UpdateException("检测掉线，正在重启...");
-
-                _logicTokenSource?.Cancel();
-                RunState = 0;
-
-                CloseEmulator();
-
-                await Task.Delay(3000);
-
-                LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 执行重启...");
-
-                Start();
+                try
+                {
+                    UpdateStatus("掉线重连", "0");
+                    UpdateException("检测掉线，正在重启...");
+                    _logicTokenSource?.Cancel();
+                    RunState = WorkerState.Idle;
+                    CloseEmulator();
+                    await Task.Delay(3000);
+                    WriteLog("执行重启...");
+                    Start();
+                }
+                catch (Exception ex)
+                {
+                    LogError($"重启异常: {ex.Message}");
+                }
             });
         }
 
@@ -180,7 +144,6 @@ namespace OLA
             try
             {
                 _ola = new OLAPlugServer("OLA.dll");
-
                 if (_ola.OLAObject == 0)
                 {
                     LogError("插件接口创建失败");
@@ -191,13 +154,11 @@ namespace OLA
                 _ola.SetPath(imageBasePath);
 
                 long parentHwnd = FindWindowWithPlugin();
-
                 if (parentHwnd == 0)
                 {
                     if (token.IsCancellationRequested) return;
 
                     UpdateStatus("启动中...", "0");
-
                     if (!LaunchEmulator())
                     {
                         LogError("启动失败");
@@ -205,28 +166,22 @@ namespace OLA
                     }
 
                     UpdateStatus("等待画面10s", "0");
-
                     try
                     {
                         await Task.Delay(10000, token);
                     }
-                    catch
+                    catch (OperationCanceledException)
                     {
                         return;
                     }
 
                     UpdateException("等待60秒监控介入...");
-
                     int retry = 0;
                     while (parentHwnd == 0 && retry < 30)
                     {
                         if (token.IsCancellationRequested) return;
-
                         parentHwnd = FindWindowWithPlugin();
-
-                        if (parentHwnd != 0)
-                            break;
-
+                        if (parentHwnd != 0) break;
                         await Task.Delay(1000, token);
                         retry++;
                     }
@@ -241,16 +196,11 @@ namespace OLA
                 UpdateStatus("等待画面", parentHwnd.ToString());
 
                 long childHwnd = 0;
-
-                while (RunState != 4 && childHwnd == 0)
+                while (RunState != WorkerState.Stopped && childHwnd == 0)
                 {
                     if (token.IsCancellationRequested) return;
-
                     childHwnd = _ola!.GetWindow(parentHwnd, 1);
-
-                    if (childHwnd != 0)
-                        break;
-
+                    if (childHwnd != 0) break;
                     await Task.Delay(1000, token);
                 }
 
@@ -266,7 +216,7 @@ namespace OLA
                 if (ret == 1)
                 {
                     UpdateStatus("运行中", childHwnd.ToString());
-                    LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 成功绑定窗口: 0x{childHwnd:X}");
+                    WriteLog($"成功绑定窗口: 0x{childHwnd:X}");
 
                     try
                     {
@@ -274,24 +224,27 @@ namespace OLA
                     }
                     catch (OperationCanceledException)
                     {
+                        WriteLog("任务已取消");
                     }
                     catch (Exception ex)
                     {
-                        if (!token.IsCancellationRequested)
-                            LogError($"逻辑异常:{ex.Message}");
+                        if (!token.IsCancellationRequested) LogError($"逻辑异常: {ex.Message}");
                     }
 
-                    RunState = 4;
+                    RunState = WorkerState.Stopped;
                 }
                 else
                 {
-                    LogError($"绑定失败:{ret}");
+                    LogError($"绑定失败: {ret}");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                WriteLog("逻辑线程已取消");
             }
             catch (Exception ex)
             {
-                if (!token.IsCancellationRequested)
-                    LogError($"异常:{ex.Message}");
+                if (!token.IsCancellationRequested) LogError($"异常: {ex.Message}");
             }
             finally
             {
@@ -306,7 +259,7 @@ namespace OLA
 
             if (TaskList == null || TaskList.Count == 0)
             {
-                LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 未分配任务");
+                WriteLog("未分配任务");
                 await Task.Delay(2000, token);
                 return;
             }
@@ -316,118 +269,60 @@ namespace OLA
             foreach (var taskName in TaskList)
             {
                 await CheckPauseStateAsync();
+                if (RunState == WorkerState.Stopped) break;
 
-                if (RunState == 4)
-                    break;
-
-                LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ======= 开始执行: {taskName} =======");
+                WriteLog($"======= 开始执行: {taskName} =======");
 
                 try
                 {
                     await gameTask.Execute(taskName);
                 }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
-                    LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 任务[{taskName}]出错: {ex.Message}");
+                    WriteLog($"任务[{taskName}]出错: {ex.Message}");
                 }
 
-                if (RunState == 4)
-                    break;
+                if (RunState == WorkerState.Stopped) break;
 
-                LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] {taskName} 已完成");
-
+                WriteLog($"{taskName} 已完成");
                 await Task.Delay(1000, token);
             }
 
-            if (RunState != 4)
+            if (RunState != WorkerState.Stopped)
             {
                 UpdateStatus("任务已全部完成", currentHwnd.ToString());
-                LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 所有任务已完成");
+                WriteLog("所有任务已完成");
             }
         }
 
         #endregion
 
-        // =======================================================================
-        // OL_SDK 标准封装方法区
-        // =======================================================================
+        #region OL_SDK 封装方法
 
-        /// <summary>
-        /// 在当前绑定窗口指定区域找图，找到后点击指定坐标。
-        /// <para>参数：</para>
-        /// <list type="bullet">
-        /// <item><description>x1, y1, x2, y2：找图区域。</description></item>
-        /// <item><description>imgName：图片文件名，例如 "开始游戏.bmp"。</description></item>
-        /// <item><description>targetX, targetY：找到图片后点击的坐标。</description></item>
-        /// <item><description>delay：点击后等待时间。默认 1000 毫秒，即 1 秒。</description></item>
-        /// <item><description>offset：点击随机偏移。默认 ±5。</description></item>
-        /// <item><description>sim：图片相似度。默认 0.85。</description></item>
-        /// </list>
-        /// <para>默认写法：</para>
-        /// <code>if (await _worker.OL_MatchWindowsFromPath(0, 0, 960, 540, "开始游戏.bmp", 481, 485)) continue;</code>
-        /// <para>单独修改写法：</para>
-        /// <code>if (await _worker.OL_MatchWindowsFromPath(0, 0, 960, 540, "开始游戏.bmp", 481, 485, 5000, 10, 0.9)) continue;</code>
-        /// <para>说明：5000 = 等 5 秒；10 = 偏移 ±10；0.9 = 相似度。</para>
-        /// </summary>
-        /// <param name="x1">查找区域左上角 X 坐标。</param>
-        /// <param name="y1">查找区域左上角 Y 坐标。</param>
-        /// <param name="x2">查找区域右下角 X 坐标。</param>
-        /// <param name="y2">查找区域右下角 Y 坐标。</param>
-        /// <param name="imgName">要查找的图片文件名，例如："开始游戏.bmp"。图片路径基于插件 SetPath 设置的目录。</param>
-        /// <param name="targetX">找到图片后要点击的目标 X 坐标。</param>
-        /// <param name="targetY">找到图片后要点击的目标 Y 坐标。</param>
-        /// <param name="delay">点击完成后的等待时间，单位毫秒。默认 1000，即 1 秒。</param>
-        /// <param name="offset">点击随机偏移范围，默认 5。实际点击坐标会在 ±offset 范围内随机浮动。</param>
-        /// <param name="sim">图片相似度，默认 0.85。数值越高匹配越严格。</param>
-        /// <returns>找到图片并完成点击返回 true；未找到图片返回 false。</returns>
         public async Task<bool> OL_MatchWindowsFromPath(
-            int x1,
-            int y1,
-            int x2,
-            int y2,
+            int x1, int y1, int x2, int y2,
             string imgName,
-            int targetX,
-            int targetY,
+            int targetX, int targetY,
             int delay = DefaultClickDelay,
             int offset = DefaultClickOffset,
             double sim = DefaultImageSimilarity)
         {
             var res = _ola!.MatchWindowsFromPath(x1, y1, x2, y2, imgName, sim, 0, 0, 1.0);
-
             if (res != null && res.MatchState)
             {
-                LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 找图: {imgName} -> 找到 -> 执行点击");
-
+                WriteLog($"找图: {imgName} -> 找到 -> 执行点击");
                 await OL_LeftClick(targetX, targetY, offset);
                 await SmartSleep(delay);
-
                 return true;
             }
 
             return false;
         }
 
-        /// <summary>
-        /// 判断多个屏幕坐标点颜色是否全部匹配，全部匹配后点击指定坐标。
-        /// <para>参数：</para>
-        /// <list type="bullet">
-        /// <item><description>pointsStr：多点颜色字符串，格式 "x,y,color|x,y,color"。</description></item>
-        /// <item><description>targetX, targetY：匹配成功后点击的坐标。</description></item>
-        /// <item><description>delay：点击后等待时间。默认 1000 毫秒，即 1 秒。</description></item>
-        /// <item><description>offset：点击随机偏移。默认 ±5。</description></item>
-        /// </list>
-        /// <para>默认写法：</para>
-        /// <code>if (await _worker.OL_CmpColor("514,116,a37b20|520,116,8d6d21", 939, 22)) break;</code>
-        /// <para>单独修改写法：</para>
-        /// <code>if (await _worker.OL_CmpColor("514,116,a37b20|520,116,8d6d21", 939, 22, 5000, 10)) break;</code>
-        /// <para>说明：5000 = 等 5 秒；10 = 偏移 ±10。</para>
-        /// </summary>
-        /// <param name="pointsStr">多点颜色字符串，格式为："x,y,color|x,y,color|x,y,color"。</param>
-        /// <param name="targetX">颜色匹配成功后要点击的目标 X 坐标。</param>
-        /// <param name="targetY">颜色匹配成功后要点击的目标 Y 坐标。</param>
-        /// <param name="delay">点击完成后的等待时间，单位毫秒。默认 1000，即 1 秒。</param>
-        /// <param name="offset">点击随机偏移范围，默认 5。</param>
-        /// <returns>所有颜色点都匹配并完成点击返回 true；任意一个点不匹配返回 false。</returns>
         public async Task<bool> OL_CmpColor(
             string pointsStr,
             int targetX,
@@ -435,17 +330,13 @@ namespace OLA
             int delay = DefaultClickDelay,
             int offset = DefaultClickOffset)
         {
-            if (string.IsNullOrEmpty(pointsStr))
-                return false;
+            if (string.IsNullOrEmpty(pointsStr)) return false;
 
             string[] points = pointsStr.Split('|');
-
             foreach (string p in points)
             {
                 string[] item = p.Split(',');
-
-                if (item.Length < 3)
-                    continue;
+                if (item.Length < 3) continue;
 
                 int x = int.Parse(item[0]);
                 int y = int.Parse(item[1]);
@@ -457,92 +348,32 @@ namespace OLA
                 }
             }
 
-            LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 找色: 多点特征 -> 匹配 -> 执行点击");
-
+            WriteLog("找色: 多点特征 -> 匹配 -> 执行点击");
             await OL_LeftClick(targetX, targetY, offset);
             await SmartSleep(delay);
-
             return true;
         }
 
-        /// <summary>
-        /// 在指定区域通过字库找文字，找到后点击文字所在位置。
-        /// <para>参数：</para>
-        /// <list type="bullet">
-        /// <item><description>x1, y1, x2, y2：找字区域。</description></item>
-        /// <item><description>text：要查找的文字。</description></item>
-        /// <item><description>color：文字颜色或偏色配置，例如 "e3dbcb-303030"。</description></item>
-        /// <item><description>delay：点击后等待时间。默认 1000 毫秒，即 1 秒。</description></item>
-        /// </list>
-        /// <para>默认写法：</para>
-        /// <code>if (await _worker.OL_FindStr(87, 328, 117, 350, "幻术园", "e3dbcb-303030")) continue;</code>
-        /// <para>单独修改写法：</para>
-        /// <code>if (await _worker.OL_FindStr(87, 328, 117, 350, "幻术园", "e3dbcb-303030", 5000)) continue;</code>
-        /// <para>说明：5000 = 点击后等待 5 秒。</para>
-        /// </summary>
-        /// <param name="x1">查找区域左上角 X 坐标。</param>
-        /// <param name="y1">查找区域左上角 Y 坐标。</param>
-        /// <param name="x2">查找区域右下角 X 坐标。</param>
-        /// <param name="y2">查找区域右下角 Y 坐标。</param>
-        /// <param name="text">要查找的文字内容。</param>
-        /// <param name="color">文字颜色或偏色配置，例如："e3dbcb-303030"。</param>
-        /// <param name="delay">点击完成后的等待时间，单位毫秒。默认 1000，即 1 秒。</param>
-        /// <returns>找到文字并点击成功返回 true；未找到文字返回 false。</returns>
         public async Task<bool> OL_FindStr(
-            int x1,
-            int y1,
-            int x2,
-            int y2,
+            int x1, int y1, int x2, int y2,
             string text,
             string color,
             int delay = DefaultClickDelay)
         {
             int x, y;
-
             if (_ola!.FindStr(x1, y1, x2, y2, text, color, "无尽黑暗.txt", 0.8, out x, out y) != -1)
             {
-                LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 找字: {text} -> 找到 -> 执行点击");
-
+                WriteLog($"找字: {text} -> 找到 -> 执行点击");
                 await OL_LeftClick(x, y);
                 await SmartSleep(delay);
-
                 return true;
             }
 
             return false;
         }
 
-        /// <summary>
-        /// 在指定区域通过字库找文字，找到后点击指定固定坐标。
-        /// <para>参数：</para>
-        /// <list type="bullet">
-        /// <item><description>x1, y1, x2, y2：找字区域。</description></item>
-        /// <item><description>text：要查找的文字。</description></item>
-        /// <item><description>color：文字颜色或偏色配置，例如 "ada187-101010"。</description></item>
-        /// <item><description>clickX, clickY：找到文字后点击的固定坐标。</description></item>
-        /// <item><description>delay：点击后等待时间。默认 1000 毫秒，即 1 秒。</description></item>
-        /// </list>
-        /// <para>默认写法：</para>
-        /// <code>if (await _worker.OL_FindStr(78, 36, 91, 49, "等级达到30", "ada187-101010", 871, 79)) break;</code>
-        /// <para>单独修改写法：</para>
-        /// <code>if (await _worker.OL_FindStr(78, 36, 91, 49, "等级达到30", "ada187-101010", 871, 79, 5000)) break;</code>
-        /// <para>说明：5000 = 点击后等待 5 秒。</para>
-        /// </summary>
-        /// <param name="x1">查找区域左上角 X 坐标。</param>
-        /// <param name="y1">查找区域左上角 Y 坐标。</param>
-        /// <param name="x2">查找区域右下角 X 坐标。</param>
-        /// <param name="y2">查找区域右下角 Y 坐标。</param>
-        /// <param name="text">要查找的文字内容。</param>
-        /// <param name="color">文字颜色或偏色配置，例如："ada187-101010"。</param>
-        /// <param name="clickX">找到文字后要点击的指定 X 坐标。</param>
-        /// <param name="clickY">找到文字后要点击的指定 Y 坐标。</param>
-        /// <param name="delay">点击完成后的等待时间，单位毫秒。默认 1000，即 1 秒。</param>
-        /// <returns>找到文字并完成指定坐标点击返回 true；未找到文字返回 false。</returns>
         public async Task<bool> OL_FindStr(
-            int x1,
-            int y1,
-            int x2,
-            int y2,
+            int x1, int y1, int x2, int y2,
             string text,
             string color,
             int clickX,
@@ -550,65 +381,23 @@ namespace OLA
             int delay = DefaultClickDelay)
         {
             int x, y;
-
             if (_ola!.FindStr(x1, y1, x2, y2, text, color, "无尽黑暗.txt", 0.8, out x, out y) != -1)
             {
-                LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 找字: {text} -> 找到 -> 点击指定位置({clickX},{clickY})");
-
+                WriteLog($"找字: {text} -> 找到 -> 点击指定位置({clickX},{clickY})");
                 await OL_LeftClick(clickX, clickY);
                 await SmartSleep(delay);
-
                 return true;
             }
 
             return false;
         }
 
-        /// <summary>
-        /// 使用内置字库识别指定区域内的文字。
-        /// <para>参数：</para>
-        /// <list type="bullet">
-        /// <item><description>x1, y1, x2, y2：识别区域。</description></item>
-        /// <item><description>color：文字颜色或偏色配置，例如 "e3dbcb-303030"。</description></item>
-        /// </list>
-        /// <para>写法：</para>
-        /// <code>string text = _worker.OL_OcrFromDict(80, 30, 200, 60, "e3dbcb-303030");</code>
-        /// <para>返回：识别到的字符串；没有识别到返回空字符串。</para>
-        /// </summary>
-        /// <param name="x1">识别区域左上角 X 坐标。</param>
-        /// <param name="y1">识别区域左上角 Y 坐标。</param>
-        /// <param name="x2">识别区域右下角 X 坐标。</param>
-        /// <param name="y2">识别区域右下角 Y 坐标。</param>
-        /// <param name="color">文字颜色或偏色配置，例如："e3dbcb-303030"。</param>
-        /// <returns>返回识别到的字符串；如果没有识别到内容，则返回空字符串。</returns>
-        public string OL_OcrFromDict(
-            int x1,
-            int y1,
-            int x2,
-            int y2,
-            string color)
+        public string OL_OcrFromDict(int x1, int y1, int x2, int y2, string color)
         {
             string text = _ola!.OcrFromDict(x1, y1, x2, y2, color, "无尽黑暗.txt", 0.8);
             return text ?? "";
         }
 
-        /// <summary>
-        /// 在指定坐标附近执行一次左键点击，并自动加入随机偏移。
-        /// <para>参数：</para>
-        /// <list type="bullet">
-        /// <item><description>x, y：目标点击坐标。</description></item>
-        /// <item><description>range：随机偏移范围。默认 ±5。</description></item>
-        /// </list>
-        /// <para>默认写法：</para>
-        /// <code>await _worker.OL_LeftClick(481, 485);</code>
-        /// <para>单独修改写法：</para>
-        /// <code>await _worker.OL_LeftClick(481, 485, 10);</code>
-        /// <para>说明：10 = 点击随机偏移 ±10。</para>
-        /// </summary>
-        /// <param name="x">目标 X 坐标。</param>
-        /// <param name="y">目标 Y 坐标。</param>
-        /// <param name="range">随机偏移范围，默认 5。实际点击坐标会在 x±range、y±range 范围内随机生成。</param>
-        /// <returns>异步点击任务。</returns>
         public async Task OL_LeftClick(int x, int y, int range = DefaultClickOffset)
         {
             LastActionTime = DateTime.Now;
@@ -617,40 +406,19 @@ namespace OLA
             int rndY = y + _rnd.Next(-range, range + 1);
 
             _ola!.MoveTo(rndX, rndY);
-
             await Task.Delay(_rnd.Next(30, 100), _currentToken);
-
             _ola.LeftDown();
-
             await Task.Delay(_rnd.Next(50, 200), _currentToken);
-
             _ola.LeftUp();
         }
 
-        /// <summary>
-        /// 智能延迟等待，会自动检查暂停、恢复、停止和取消状态。
-        /// <para>参数：</para>
-        /// <list type="bullet">
-        /// <item><description>ms：等待时间，单位毫秒。</description></item>
-        /// </list>
-        /// <para>写法：</para>
-        /// <code>if (!await _worker.SmartSleep(1000)) return;</code>
-        /// <para>说明：1000 = 等待 1 秒。</para>
-        /// </summary>
-        /// <param name="ms">等待时间，单位毫秒。</param>
-        /// <returns>正常等待完成返回 true；如果任务被停止、取消或中断，返回 false。</returns>
         public async Task<bool> SmartSleep(int ms)
         {
             try
             {
-                if (await CheckLoopStateAsync())
-                    return false;
-
+                if (await CheckLoopStateAsync()) return false;
                 await Task.Delay(ms, _currentToken);
-
-                if (await CheckLoopStateAsync())
-                    return false;
-
+                if (await CheckLoopStateAsync()) return false;
                 return true;
             }
             catch (TaskCanceledException)
@@ -659,80 +427,64 @@ namespace OLA
             }
         }
 
-        // =======================================================================
-        // 内部辅助方法
-        // =======================================================================
+        #endregion
 
         #region 内部辅助方法
 
-        /// <summary>
-        /// 确保游戏进程处于启动状态。
-        /// <para>当前主要支持雷电模拟器。</para>
-        /// <para>会根据 EmulatorName 解析模拟器索引，然后调用 ldconsole.exe 启动指定 PackageName。</para>
-        /// <para>写法：</para>
-        /// <code>_worker.EnsureGameRunning();</code>
-        /// </summary>
         public void EnsureGameRunning()
         {
-            if (EmulatorName.Contains("雷电"))
+            if (!EmulatorName.Contains("雷电")) return;
+
+            try
             {
-                try
+                string indexStr = "0";
+                if (EmulatorName.Contains("-")) indexStr = EmulatorName.Split('-')[1];
+
+                string cmdExe = Path.Combine(EmulatorBasePath, "ldconsole.exe");
+                if (!File.Exists(cmdExe))
                 {
-                    string indexStr = "0";
-
-                    if (EmulatorName.Contains("-"))
-                        indexStr = EmulatorName.Split('-')[1];
-
-                    string cmdExe = Path.Combine(EmulatorBasePath, "ldconsole.exe");
-
-                    if (!File.Exists(cmdExe))
-                    {
-                        LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 未找到 ldconsole.exe");
-                        return;
-                    }
-
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = cmdExe,
-                        Arguments = $"launchex --index {indexStr} --packagename {PackageName}",
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    });
-
-                    LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 正在拉起游戏: {PackageName}");
+                    WriteLog("未找到 ldconsole.exe");
+                    return;
                 }
-                catch (Exception ex)
+
+                Process.Start(new ProcessStartInfo
                 {
-                    LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 启动指令失败: {ex.Message}");
-                }
+                    FileName = cmdExe,
+                    Arguments = $"launchex --index {indexStr} --packagename {PackageName}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+
+                WriteLog($"正在拉起游戏: {PackageName}");
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"启动指令失败: {ex.Message}");
             }
         }
 
         private async Task<bool> CheckLoopStateAsync()
         {
-            if (_currentToken.IsCancellationRequested)
-                return true;
-
+            if (_currentToken.IsCancellationRequested) return true;
             await CheckPauseStateAsync();
-
-            return RunState == 4;
+            return RunState == WorkerState.Stopped;
         }
 
         private async Task CheckPauseStateAsync()
         {
             bool wasPaused = false;
 
-            while (RunState == 2)
+            while (RunState == WorkerState.Paused)
             {
                 wasPaused = true;
-
                 _currentToken.ThrowIfCancellationRequested();
-
                 await Task.Delay(500, _currentToken);
             }
 
-            if (RunState == 3)
-                RunState = 1;
+            if (RunState == WorkerState.Resuming)
+            {
+                RunState = WorkerState.Running;
+            }
 
             if (wasPaused)
             {
@@ -745,22 +497,16 @@ namespace OLA
 
         private long FindWindowWithPlugin()
         {
-            if (_ola is null)
-                return 0;
+            if (_ola is null) return 0;
 
             long hwnd = _ola.FindWindow(EmulatorClass, EmulatorName);
-
-            if (hwnd == 0)
-                hwnd = _ola.FindWindow(EmulatorClass, EmulatorName + "(64)");
+            if (hwnd == 0) hwnd = _ola.FindWindow(EmulatorClass, EmulatorName + "(64)");
 
             if (hwnd == 0 && EmulatorName.EndsWith("-0"))
             {
                 string altName = EmulatorName.Replace("-0", "");
-
                 hwnd = _ola.FindWindow(EmulatorClass, altName);
-
-                if (hwnd == 0)
-                    hwnd = _ola.FindWindow(EmulatorClass, altName + "(64)");
+                if (hwnd == 0) hwnd = _ola.FindWindow(EmulatorClass, altName + "(64)");
             }
 
             return hwnd;
@@ -774,8 +520,7 @@ namespace OLA
                 string args = "";
                 string indexStr = "0";
 
-                if (EmulatorName.Contains("-"))
-                    indexStr = EmulatorName.Split('-')[^1];
+                if (EmulatorName.Contains("-")) indexStr = EmulatorName.Split('-')[^1];
 
                 if (EmulatorName.Contains("雷电"))
                 {
@@ -785,17 +530,16 @@ namespace OLA
                 else if (EmulatorName.Contains("MuMu"))
                 {
                     string shellPath = Path.Combine(Directory.GetParent(EmulatorBasePath)?.FullName ?? "", "shell");
-
                     cmdExe = Path.Combine(shellPath, "MuMuManager.exe");
-
-                    if (!File.Exists(cmdExe))
-                        cmdExe = Path.Combine(EmulatorBasePath, "MuMuManager.exe");
-
+                    if (!File.Exists(cmdExe)) cmdExe = Path.Combine(EmulatorBasePath, "MuMuManager.exe");
                     args = $"player launch {indexStr}";
                 }
 
                 if (!File.Exists(cmdExe))
+                {
+                    WriteLog($"启动文件不存在: {cmdExe}");
                     return false;
+                }
 
                 Process.Start(new ProcessStartInfo
                 {
@@ -807,8 +551,9 @@ namespace OLA
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                WriteLog($"启动模拟器异常: {ex.Message}");
                 return false;
             }
         }
@@ -821,8 +566,7 @@ namespace OLA
                 string args = "";
                 string indexStr = "0";
 
-                if (EmulatorName.Contains("-"))
-                    indexStr = EmulatorName.Split('-')[^1];
+                if (EmulatorName.Contains("-")) indexStr = EmulatorName.Split('-')[^1];
 
                 if (EmulatorName.Contains("雷电"))
                 {
@@ -831,7 +575,22 @@ namespace OLA
                 }
                 else if (EmulatorName.Contains("MuMu"))
                 {
-                    // MuMu 关闭逻辑可按需补充
+                    string[] possiblePaths =
+                    {
+                        Path.Combine(EmulatorBasePath, "shell", "MuMuManager.exe"),
+                        Path.Combine(EmulatorBasePath, "MuMuManager.exe"),
+                        Path.Combine(EmulatorBasePath, "nx_main", "MuMuManager.exe")
+                    };
+
+                    foreach (var p in possiblePaths)
+                    {
+                        if (File.Exists(p))
+                        {
+                            cmdExe = p;
+                            args = $"api -v {indexStr} shutdown_player";
+                            break;
+                        }
+                    }
                 }
 
                 if (File.Exists(cmdExe))
@@ -844,18 +603,29 @@ namespace OLA
                         CreateNoWindow = true
                     });
                 }
+                else
+                {
+                    WriteLog($"关闭文件不存在: {cmdExe}");
+                }
             }
-            catch
+            catch (Exception ex)
             {
+                WriteLog($"关闭模拟器异常: {ex.Message}");
             }
         }
 
         private void LogError(string msg)
         {
-            LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] {msg}");
-
+            WriteLog(msg);
             UpdateStatus("错误", "0");
             UpdateException(msg);
+        }
+
+        private void WriteLog(string msg)
+        {
+            string line = $"[{DateTime.Now:HH:mm:ss}] {msg}";
+            LogCallback?.Invoke(line);
+            Debug.WriteLine(line);
         }
 
         private void UpdateStatus(string status, string hwnd)
@@ -878,14 +648,21 @@ namespace OLA
 
         private void Cleanup()
         {
-            if (_ola != null)
+            try
             {
-                _ola.UnBindWindow();
-                _ola.ReleaseObj();
-                _ola = null;
+                if (_ola != null)
+                {
+                    _ola.UnBindWindow();
+                    _ola.ReleaseObj();
+                    _ola = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"释放插件异常: {ex.Message}");
             }
 
-            if (RunState == 4)
+            if (RunState == WorkerState.Stopped)
             {
                 UpdateStatus("已停止", "0");
                 UpdateException("");
