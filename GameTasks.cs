@@ -62,6 +62,36 @@ namespace OLA
 
             if (!await _worker.SmartSleep(1000)) return;
 
+            DateTime enterStartTime = DateTime.Now;
+
+            // 小循环：主线任务进入条件
+            // 进入条件：执行到了 MainQuest()
+            // 退出条件 1：找到 游戏主页面.bmp -> break -> 进入下面正式主线循环
+            // 退出条件 2：3 分钟内没找到 游戏主页面.bmp -> MarkTaskFailed + return
+            while (true)
+            {
+                if (!await _worker.SmartSleep(1000)) return;
+
+                var mainPage = _worker.Ola.MatchWindowsFromPath(0, 0, 960, 540, "游戏主页面.bmp", 0.85, 0, 0, 1.0);
+                if (mainPage != null && mainPage.MatchState)
+                {
+                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] 找到游戏主页面.bmp，进入主线任务循环");
+                    await _worker.SmartSleep(1000);
+                    break;
+                }
+
+                if ((DateTime.Now - enterStartTime).TotalMinutes >= 3)
+                {
+                    MarkTaskFailed("⏳ 三分钟内未找到游戏主页面.bmp，无法进入主线任务循环");
+                    return;
+                }
+            }
+
+            _worker.LastActionTime = DateTime.Now;
+
+            // 大循环：正式主线任务循环
+            // 进入条件：上面小循环已经找到 游戏主页面.bmp
+            // 退出条件：找到 等级不足.bmp -> break -> 主线任务结束
             while (true)
             {
                 if (!await _worker.SmartSleep(1000)) return;
@@ -75,10 +105,18 @@ namespace OLA
                 var im = _worker.Ola.MatchWindowsFromPath(0, 0, 960, 540, "等级不足.bmp", 0.85, 0, 0, 1.0);
                 if (im != null && im.MatchState)
                 {
-                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⛔ 发现等级不足，退出主线循环");
+                    _worker.LogCallback?.Invoke($"[{DateTime.Now:HH:mm:ss}] ⛔ 等级不足，退出主线循环");
                     await _worker.SmartSleep(1000);
                     break;
                 }
+
+
+
+
+                if (await _worker.OL_MatchWindowsFromPath(0, 0, 960, 540, "主线任务引导.bmp", 95, 136)) continue;
+                if (await _worker.OL_CmpColor("834,373,f9e0b9|834,377,dbc693|808,373,fbfbd7", 808, 376, 500)) continue;
+
+
 
                 if (await _worker.OL_MatchWindowsFromPath(641, 442, 694, 457, "立即加点.bmp", 666, 449, 500))
                 {
