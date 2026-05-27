@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -211,6 +211,8 @@ namespace OLA
 
             if (rowsToStart.Count == 0) return;
 
+            bool autoLogin = this.zidong_denglu.Checked;
+
             Task.Run(() =>
             {
                 foreach (var item in rowsToStart)
@@ -223,6 +225,7 @@ namespace OLA
                     });
 
                     worker.TaskList = new List<string>(selectedTasks);
+                    worker.AutoLogin = autoLogin;
 
                     long checkHwnd = 0;
                     try
@@ -1037,6 +1040,11 @@ namespace OLA
         {
             string timeStr = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             Debug.WriteLine($"[{timeStr}] {msg}");
+        }
+
+        private void zidong_denglu_CheckedChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

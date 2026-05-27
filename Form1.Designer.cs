@@ -33,6 +33,13 @@ namespace OLA
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
             moniqi_liebiao = new DataGridView();
+            xuhao = new DataGridViewTextBoxColumn();
+            moniqi = new DataGridViewTextBoxColumn();
+            zhanghao = new DataGridViewTextBoxColumn();
+            mima = new DataGridViewTextBoxColumn();
+            zhuangtai = new DataGridViewTextBoxColumn();
+            jubing = new DataGridViewTextBoxColumn();
+            yichang = new DataGridViewTextBoxColumn();
             tabControl1 = new TabControl();
             tabPage1 = new TabPage();
             shuaxin_liebiao = new Button();
@@ -64,13 +71,6 @@ namespace OLA
             statusStrip1 = new StatusStrip();
             yunxingshijian = new ToolStripStatusLabel();
             timer_runtime = new System.Windows.Forms.Timer(components);
-            xuhao = new DataGridViewTextBoxColumn();
-            moniqi = new DataGridViewTextBoxColumn();
-            zhanghao = new DataGridViewTextBoxColumn();
-            mima = new DataGridViewTextBoxColumn();
-            zhuangtai = new DataGridViewTextBoxColumn();
-            jubing = new DataGridViewTextBoxColumn();
-            yichang = new DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)moniqi_liebiao).BeginInit();
             tabControl1.SuspendLayout();
             tabPage1.SuspendLayout();
@@ -105,6 +105,58 @@ namespace OLA
             moniqi_liebiao.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             moniqi_liebiao.Size = new Size(791, 297);
             moniqi_liebiao.TabIndex = 0;
+            // 
+            // xuhao
+            // 
+            xuhao.HeaderText = "序号";
+            xuhao.Name = "xuhao";
+            xuhao.ReadOnly = true;
+            xuhao.SortMode = DataGridViewColumnSortMode.NotSortable;
+            xuhao.Width = 56;
+            // 
+            // moniqi
+            // 
+            moniqi.HeaderText = "模拟器";
+            moniqi.Name = "moniqi";
+            moniqi.ReadOnly = true;
+            moniqi.SortMode = DataGridViewColumnSortMode.NotSortable;
+            // 
+            // zhanghao
+            // 
+            zhanghao.HeaderText = "账号";
+            zhanghao.Name = "zhanghao";
+            zhanghao.ReadOnly = true;
+            zhanghao.SortMode = DataGridViewColumnSortMode.NotSortable;
+            // 
+            // mima
+            // 
+            mima.HeaderText = "密码";
+            mima.Name = "mima";
+            mima.ReadOnly = true;
+            mima.SortMode = DataGridViewColumnSortMode.NotSortable;
+            // 
+            // zhuangtai
+            // 
+            zhuangtai.HeaderText = "状态";
+            zhuangtai.Name = "zhuangtai";
+            zhuangtai.ReadOnly = true;
+            zhuangtai.SortMode = DataGridViewColumnSortMode.NotSortable;
+            zhuangtai.Width = 177;
+            // 
+            // jubing
+            // 
+            jubing.HeaderText = "句柄";
+            jubing.Name = "jubing";
+            jubing.ReadOnly = true;
+            jubing.SortMode = DataGridViewColumnSortMode.NotSortable;
+            // 
+            // yichang
+            // 
+            yichang.HeaderText = "异常";
+            yichang.Name = "yichang";
+            yichang.ReadOnly = true;
+            yichang.SortMode = DataGridViewColumnSortMode.NotSortable;
+            yichang.Width = 150;
             // 
             // tabControl1
             // 
@@ -239,6 +291,7 @@ namespace OLA
             zidong_denglu.TabIndex = 10;
             zidong_denglu.Text = "自动登录";
             zidong_denglu.UseVisualStyleBackColor = true;
+            zidong_denglu.CheckedChanged += zidong_denglu_CheckedChanged;
             // 
             // pailie_fangshi
             // 
@@ -404,58 +457,6 @@ namespace OLA
             // 
             timer_runtime.Interval = 1000;
             timer_runtime.Tick += timer_runtime_Tick;
-            // 
-            // xuhao
-            // 
-            xuhao.HeaderText = "序号";
-            xuhao.Name = "xuhao";
-            xuhao.ReadOnly = true;
-            xuhao.SortMode = DataGridViewColumnSortMode.NotSortable;
-            xuhao.Width = 56;
-            // 
-            // moniqi
-            // 
-            moniqi.HeaderText = "模拟器";
-            moniqi.Name = "moniqi";
-            moniqi.ReadOnly = true;
-            moniqi.SortMode = DataGridViewColumnSortMode.NotSortable;
-            // 
-            // zhanghao
-            // 
-            zhanghao.HeaderText = "账号";
-            zhanghao.Name = "zhanghao";
-            zhanghao.ReadOnly = true;
-            zhanghao.SortMode = DataGridViewColumnSortMode.NotSortable;
-            // 
-            // mima
-            // 
-            mima.HeaderText = "密码";
-            mima.Name = "mima";
-            mima.ReadOnly = true;
-            mima.SortMode = DataGridViewColumnSortMode.NotSortable;
-            // 
-            // zhuangtai
-            // 
-            zhuangtai.HeaderText = "状态";
-            zhuangtai.Name = "zhuangtai";
-            zhuangtai.ReadOnly = true;
-            zhuangtai.SortMode = DataGridViewColumnSortMode.NotSortable;
-            zhuangtai.Width = 177;
-            // 
-            // jubing
-            // 
-            jubing.HeaderText = "句柄";
-            jubing.Name = "jubing";
-            jubing.ReadOnly = true;
-            jubing.SortMode = DataGridViewColumnSortMode.NotSortable;
-            // 
-            // yichang
-            // 
-            yichang.HeaderText = "异常";
-            yichang.Name = "yichang";
-            yichang.ReadOnly = true;
-            yichang.SortMode = DataGridViewColumnSortMode.NotSortable;
-            yichang.Width = 150;
             // 
             // Form1
             // 

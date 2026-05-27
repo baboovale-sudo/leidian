@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using OLAPlug;
 
@@ -37,7 +37,7 @@ namespace OLA
                     await DailyActive();
                     break;
 
-                case "自动签到":
+                case "每日签到":
                     await AutoSign();
                     break;
 
@@ -58,12 +58,9 @@ namespace OLA
 
         private async Task MainQuest()
         {
-            _worker.StatusCallback?.Invoke(_worker.RowIndex, "启动/检查游戏", _worker.CurrentBindHwnd.ToString());
-            _worker.EnsureGameRunning();
-
-            if (!await _worker.SmartSleep(5000)) return;
-
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "执行主线中...", _worker.CurrentBindHwnd.ToString());
+
+            if (!await _worker.SmartSleep(1000)) return;
 
             while (true)
             {
@@ -141,8 +138,6 @@ namespace OLA
                 if (await _worker.OL_CmpColor("424,403,62e303|424,436,6cf903|466,459,f7b164|775,511,b92e2c|905,520,edefef", 910, 519, 500)) continue;
                 if (await _worker.OL_CmpColor("819,13,ede7db|827,476,efefef|790,480,f1f3f3|824,437,dbdbdb", 807, 478, 500)) continue;
                 if (await _worker.OL_MatchWindowsFromPath(557, 166, 669, 204, "新手启程礼.bmp", 575, 359, 500)) continue;
-                if (await _worker.OL_MatchWindowsFromPath(0, 0, 960, 540, "立即启动.bmp", 478, 395, 3000)) continue;
-                if (await _worker.OL_MatchWindowsFromPath(445, 476, 516, 498, "开始游戏.bmp", 481, 485, 3000)) continue;
                 if (await _worker.OL_CmpColor("41,115,bd972c|41,113,bd972c|41,110,bf972c", 100, 111, 2000)) continue;
                 if (await _worker.OL_CmpColor("235,174,dfd5a3|156,207,fff3bf|73,126,f1e7b7|759,184,b5afa3", 782, 476, 2000)) continue;
             }
@@ -153,9 +148,8 @@ namespace OLA
         private async Task DailyActive()
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "准备日常...", _worker.CurrentBindHwnd.ToString());
-            _worker.EnsureGameRunning();
 
-            if (!await _worker.SmartSleep(3000)) return;
+            if (!await _worker.SmartSleep(1000)) return;
 
             while (true)
             {
@@ -183,9 +177,8 @@ namespace OLA
         private async Task AutoSign()
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "自动签到中...", _worker.CurrentBindHwnd.ToString());
-            _worker.EnsureGameRunning();
 
-            if (!await _worker.SmartSleep(3000)) return;
+            if (!await _worker.SmartSleep(1000)) return;
 
             await _worker.OL_MatchWindowsFromPath(0, 0, 1280, 720, "关闭弹窗.bmp", 1200, 50, 1000);
             await _worker.OL_CmpColor("640,360,FFFFFF", 640, 360, 2000);
@@ -214,9 +207,8 @@ namespace OLA
         private async Task SideQuest()
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "执行支线中...", _worker.CurrentBindHwnd.ToString());
-            _worker.EnsureGameRunning();
 
-            if (!await _worker.SmartSleep(3000)) return;
+            if (!await _worker.SmartSleep(1000)) return;
 
             while (true)
             {
@@ -249,9 +241,8 @@ namespace OLA
         private async Task AfkTask()
         {
             _worker.StatusCallback?.Invoke(_worker.RowIndex, "开始挂机...", _worker.CurrentBindHwnd.ToString());
-            _worker.EnsureGameRunning();
 
-            if (!await _worker.SmartSleep(3000)) return;
+            if (!await _worker.SmartSleep(1000)) return;
 
             await _worker.OL_CmpColor("800,600,FF00FF", 800, 600, 500);
 

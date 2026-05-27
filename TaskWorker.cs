@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using OLAPlug;
@@ -14,7 +15,8 @@ namespace OLA
         public string EmulatorName { get; set; }
         public string EmulatorClass { get; set; }
         public string EmulatorBasePath { get; set; }
-        public string PackageName { get; set; } = "com.xy.sh.wjsy5774";
+        public string PackageName { get; set; } = "com.syyx.nuoya.idle";
+        public bool AutoLogin { get; set; } = true;
         public List<string> TaskList { get; set; } = new List<string>();
         public WorkerState RunState { get; private set; } = WorkerState.Idle;
         public DateTime LastStartTime { get; private set; }
@@ -287,6 +289,20 @@ namespace OLA
                 return;
             }
 
+            if (AutoLogin)
+            {
+                UpdateStatus("自动登录检查", currentHwnd.ToString());
+
+                bool ready = await EnsureGameReadyAsync(token);
+                if (!ready)
+                {
+                    _keepUnfinishedStatus = true;
+                    WriteLog("自动登录失败，停止后续任务");
+                    UpdateStatus("未完成", currentHwnd.ToString());
+                    return;
+                }
+            }
+
             var gameTask = new GameTask(this);
             bool allCompleted = true;
 
@@ -498,36 +514,205 @@ namespace OLA
 
         #region 内部辅助方法
 
-        public void EnsureGameRunning()
+        private string GetLdIndex()
         {
-            if (!EmulatorName.Contains("雷电")) return;
+            if (!string.IsNullOrWhiteSpace(EmulatorName) && EmulatorName.Contains("-"))
+            {
+                string[] parts = EmulatorName.Split('-');
+                return parts[^1];
+            }
+
+            return "0";
+        }
+
+        private string? GetLdConsolePath()
+        {
+            string cmdExe = Path.Combine(EmulatorBasePath, "ldconsole.exe");
+            if (!File.Exists(cmdExe))
+            {
+                WriteLog("未找到 ldconsole.exe");
+                return null;
+            }
+
+            return cmdExe;
+        }
+
+        private async Task<string> RunLdConsoleAsync(string arguments, CancellationToken token, int timeoutMs = 8000)
+        {
+            string? cmdExe = GetLdConsolePath();
+            if (cmdExe == null) return "";
+
+            using Process p = new Process();
+            p.StartInfo = new ProcessStartInfo
+            {
+                FileName = cmdExe,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
 
             try
             {
-                string indexStr = "0";
-                if (EmulatorName.Contains("-")) indexStr = EmulatorName.Split('-')[1];
+                p.Start();
 
-                string cmdExe = Path.Combine(EmulatorBasePath, "ldconsole.exe");
-                if (!File.Exists(cmdExe))
+                Task<string> outputTask = p.StandardOutput.ReadToEndAsync();
+                Task<string> errorTask = p.StandardError.ReadToEndAsync();
+                Task waitTask = p.WaitForExitAsync();
+                Task timeoutTask = Task.Delay(timeoutMs, token);
+
+                Task finished = await Task.WhenAny(waitTask, timeoutTask);
+                token.ThrowIfCancellationRequested();
+
+                if (finished == timeoutTask)
                 {
-                    WriteLog("未找到 ldconsole.exe");
-                    return;
+                    try
+                    {
+                        if (!p.HasExited) p.Kill(true);
+                    }
+                    catch
+                    {
+                    }
+
+                    return "";
                 }
 
-                Process.Start(new ProcessStartInfo
+                string output = await outputTask;
+                string error = await errorTask;
+                return (output + Environment.NewLine + error).Trim();
+            }
+            catch (OperationCanceledException)
+            {
+                try
                 {
-                    FileName = cmdExe,
-                    Arguments = $"launchex --index {indexStr} --packagename {PackageName}",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                });
+                    if (!p.HasExited) p.Kill(true);
+                }
+                catch
+                {
+                }
 
-                WriteLog($"正在拉起游戏: {PackageName}");
+                throw;
             }
             catch (Exception ex)
             {
-                WriteLog($"启动指令失败: {ex.Message}");
+                WriteLog($"执行 ldconsole 失败: {ex.Message}");
+                return "";
             }
+        }
+
+        private async Task<bool> IsGameAppRunningAsync(CancellationToken token)
+        {
+            if (!EmulatorName.Contains("雷电")) return true;
+
+            string indexStr = GetLdIndex();
+            string result = await RunLdConsoleAsync(
+                $"adb --index {indexStr} --command \"shell pidof {PackageName}\"",
+                token
+            );
+
+            string[] parts = result.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Any(x => x.All(char.IsDigit)))
+            {
+                return true;
+            }
+
+            string psResult = await RunLdConsoleAsync(
+                $"adb --index {indexStr} --command \"shell ps | grep {PackageName}\"",
+                token
+            );
+
+            return psResult.Contains(PackageName);
+        }
+
+        private async Task StartGameAppAsync(CancellationToken token)
+        {
+            if (!EmulatorName.Contains("雷电")) return;
+
+            string indexStr = GetLdIndex();
+            await RunLdConsoleAsync(
+                $"launchex --index {indexStr} --packagename {PackageName}",
+                token,
+                10000
+            );
+
+            WriteLog($"正在拉起游戏: {PackageName}");
+        }
+
+        private async Task<bool> EnsureGameReadyAsync(CancellationToken token)
+        {
+            if (!EmulatorName.Contains("雷电")) return true;
+
+            UpdateStatus("自动登录中", CurrentBindHwnd.ToString());
+            WriteLog("自动登录流程开始");
+
+            DateTime startTime = DateTime.Now;
+            DateTime lastLaunchTime = DateTime.MinValue;
+            bool loginSuccess = false;
+
+            // 进入条件：
+            // 1. 模拟器窗口已经启动并绑定成功
+            // 2. AutoLogin 已勾选
+            // 3. DoGameLogic() 调用到了这个方法
+            if (!await SmartSleep(1000)) return false;
+
+            while (true)
+            {
+                if (!await SmartSleep(1000)) return false;
+
+                token.ThrowIfCancellationRequested();
+                await CheckPauseStateAsync();
+
+                // 退出条件 1：
+                // 找到 游戏主页面.bmp，说明已经进入游戏主页面
+                // 设置 loginSuccess = true，然后 break 退出自动登录循环
+                var mainPage = _ola!.MatchWindowsFromPath(0, 0, 960, 540, "游戏主页面.bmp", 0.85, 0, 0, 1.0);
+                if (mainPage != null && mainPage.MatchState)
+                {
+                    WriteLog("找到游戏主页面.bmp，退出自动登录循环");
+                    await SmartSleep(1000);
+                    loginSuccess = true;
+                    break;
+                }
+
+                // 退出条件 2：
+                // 自动登录超过 3 分钟还没有找到 游戏主页面.bmp
+                // 设置 loginSuccess = false，然后 break 退出循环
+                if ((DateTime.Now - startTime).TotalMinutes >= 3)
+                {
+                    WriteLog("⏳ 自动登录超过三分钟，未找到游戏主页面.bmp");
+                    loginSuccess = false;
+                    break;
+                }
+
+                // 循环内容 1：
+                // 每隔 15 秒唤起一次游戏
+                // 防止游戏没有启动，或者游戏被切到后台
+                if ((DateTime.Now - lastLaunchTime).TotalSeconds >= 60)
+                {
+                    WriteLog("唤起游戏");
+                    UpdateStatus("唤起游戏中", CurrentBindHwnd.ToString());
+
+                    await StartGameAppAsync(token);
+                    lastLaunchTime = DateTime.Now;
+
+                    await SmartSleep(3000);
+                    continue;
+                }
+            
+            // 循环内容 2：
+            // 找 进入游戏.bmp
+            // 找到后点击 478,421
+            // OL_MatchWindowsFromPath 内部会调用 OL_LeftClick，点击带随机偏移
+            if (await OL_MatchWindowsFromPath(0, 0, 960, 540, "进入游戏.bmp", 478, 421, 3000)) continue;
+                if (await OL_MatchWindowsFromPath(0, 0, 960, 540, "角色页面.bmp", 778, 459, 3000)) continue;
+
+            }
+
+            // 循环结束后：
+            // true  = 自动登录成功，继续执行后续任务
+            // false = 自动登录失败，停止后续任务
+            return loginSuccess;
         }
 
         private async Task<bool> CheckLoopStateAsync()
@@ -592,7 +777,7 @@ namespace OLA
                 if (EmulatorName.Contains("雷电"))
                 {
                     cmdExe = Path.Combine(EmulatorBasePath, "ldconsole.exe");
-                    args = $"launchex --index {indexStr} --packagename {PackageName}";
+                    args = $"launch --index {indexStr}";
                 }
                 else if (EmulatorName.Contains("MuMu"))
                 {
