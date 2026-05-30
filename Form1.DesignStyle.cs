@@ -30,7 +30,7 @@ namespace OLA
             BackColor = appBg;
             ForeColor = text;
             Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            Text = "武林外传_模拟器";
+            Text = "诺亚传说口袋版";
 
             ApplyControlStyle(this, appBg, panel, panelAlt, inputBg, line, lineSoft, text, muted, neutral, neutralHover, neutralDown, accentText, dangerText);
             ApplyGridStyle(moniqi_liebiao, panel, panelAlt, header, line, text, muted);

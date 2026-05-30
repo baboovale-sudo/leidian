@@ -56,11 +56,11 @@ namespace OLA
         public Form1()
         {
             InitializeComponent();
+            this.ShowIcon = false;
+            this.Text = "";
             InitializeSettings();
             ApplyDesignMdStyle();
             this.moniqi_liebiao.ClearSelection();
-
-            Register_OLA();
 
             this.moniqi_liebiao.ClearSelection();
             this.moniqi_liebiao.CurrentCell = null;
@@ -799,17 +799,8 @@ namespace OLA
 
         private void Register_OLA()
         {
-            try
-            {
-                OLAPlugServer ola = new OLAPlugServer("OLA.dll");
-                int ret = ola.Reg(OLAConfig.UserCode, OLAConfig.SoftCode, OLAConfig.Key);
-                if (ret != 1) MessageBox.Show($"注册失败:{ret}");
-                else ola.ReleaseObj();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"DLL调用失败或丢失: {ex.Message}");
-            }
+            // 授权登录已移动到 Program.Main -> IniHelper.EnsureAuthorization()。
+            // Login 成功后会自动注册插件功能，不再调用 Reg。
         }
 
         private void moniqi_xuanze_SelectedIndexChanged(object? sender, EventArgs e)
